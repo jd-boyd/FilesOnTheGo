@@ -391,11 +391,11 @@ func TestCalculateFullPath(t *testing.T) {
 // Test circular reference detection logic
 func TestCircularReferenceDetection(t *testing.T) {
 	tests := []struct {
-		name         string
-		sourceID     string
-		targetID     string
-		hierarchy    map[string]string // directory ID -> parent ID
-		isCircular   bool
+		name       string
+		sourceID   string
+		targetID   string
+		hierarchy  map[string]string // directory ID -> parent ID
+		isCircular bool
 	}{
 		{
 			name:     "no circular reference",
