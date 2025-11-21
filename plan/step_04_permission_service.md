@@ -13,6 +13,44 @@ Implement the permission validation service that checks user access rights for f
 
 You are implementing Step 04 of the FilesOnTheGo project. Your task is to create a comprehensive permission validation service with full security test coverage.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+security: implement comprehensive permission validation service
+```
+
+**Full commit message:**
+```
+security: implement comprehensive permission validation service
+
+Add complete permission validation system with share token validation,
+quota enforcement, and security protections.
+
+Includes:
+- PermissionService interface with file, directory, and share methods
+- File permission validation (read, upload, delete, move)
+- Directory permission validation (read, create, delete)
+- Share token validation with expiration and password checks
+- Permission matrix enforcement (read, read_upload, upload_only)
+- User quota checking and management
+- Rate limiting protection against brute force attacks
+- Constant-time password comparison to prevent timing attacks
+- Comprehensive audit logging for security events
+- Permission middleware for common checks
+- 100% test coverage (security-critical code)
+- Security tests for all attack vectors
+- Edge case testing (deleted users, circular refs, etc.)
+
+Test coverage: 100%
+All tests passing
+Security: Rate limiting, timing attack prevention validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create services/permission_service.go**

@@ -13,6 +13,49 @@ Create comprehensive end-to-end integration tests that verify the entire applica
 
 You are implementing Step 14 of the FilesOnTheGo project. Your task is to create comprehensive integration tests that verify the entire system works correctly.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+test: add comprehensive integration test suite
+```
+
+**Full commit message:**
+```
+test: add comprehensive integration test suite
+
+Create end-to-end integration tests verifying complete application
+workflows with all components integrated.
+
+Includes:
+- Test infrastructure with setup and cleanup helpers
+- File upload/download flow tests with S3 verification
+- Large file and multi-file upload tests
+- Directory management flow tests with path updates
+- Share flow tests (read, read_upload, upload_only)
+- Password-protected share tests
+- Share expiration and revocation tests
+- Authentication and authorization flow tests
+- Quota management and enforcement tests
+- Concurrent operations tests with race detection
+- Error recovery and failure handling tests
+- Performance benchmarks for operations
+- User deletion cascade tests
+- Orphan cleanup tests
+- Test data fixtures for common scenarios
+- Integration test documentation
+- MinIO/S3 test bucket configuration
+- Database consistency verification
+- Test coverage >= 80%
+
+All tests passing
+Race conditions: None detected with -race flag
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create Test Infrastructure (tests/integration/setup_test.go)**

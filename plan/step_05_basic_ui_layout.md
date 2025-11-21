@@ -13,6 +13,44 @@ Create the foundational HTML templates, Tailwind CSS setup, and basic layout str
 
 You are implementing Step 05 of the FilesOnTheGo project. Your task is to create the basic UI layout and structure using HTMX and Tailwind CSS.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: create HTMX UI foundation with Tailwind CSS
+```
+
+**Full commit message:**
+```
+feat: create HTMX UI foundation with Tailwind CSS
+
+Implement foundational UI templates, layouts, and components using
+HTMX for dynamic interactions and Tailwind CSS for styling.
+
+Includes:
+- Tailwind CSS configuration and build process
+- Base layout templates (base, auth, app)
+- Reusable UI components (header, breadcrumb, toast, modal, loading)
+- Authentication pages (login, register) with HTMX forms
+- Dashboard page with empty state
+- Template rendering system with HTMX detection
+- Authentication routes and handlers
+- Responsive design for mobile, tablet, and desktop
+- Accessibility features (ARIA labels, keyboard navigation)
+- Toast notification system
+- Custom CSS for animations and transitions
+- Utility JavaScript for common functions
+- Comprehensive tests for templates and handlers
+
+Test coverage: 80%+
+All tests passing
+Accessibility: WCAG 2.1 AA compliant
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Set Up Tailwind CSS**

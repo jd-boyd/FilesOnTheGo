@@ -13,6 +13,37 @@ Set up the foundational project structure for FilesOnTheGo, initialize Go module
 
 You are implementing Step 01 of the FilesOnTheGo project. Your task is to create the complete project scaffolding and PocketBase setup.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: initialize project scaffolding with PocketBase setup
+```
+
+**Full commit message:**
+```
+feat: initialize project scaffolding with PocketBase setup
+
+Set up foundational project structure with Go modules, PocketBase
+integration, configuration management, and directory layout.
+
+Includes:
+- Go module initialization with required dependencies
+- PocketBase application setup with graceful shutdown
+- Configuration system with environment variable loading
+- Complete directory structure (handlers, services, models, etc.)
+- Structured logging with zerolog
+- Comprehensive tests for configuration system
+- Development documentation (README, .env.example)
+
+Test coverage: 80%+
+All tests passing
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Initialize Go Module**

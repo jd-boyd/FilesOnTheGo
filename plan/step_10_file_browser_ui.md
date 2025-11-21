@@ -16,6 +16,49 @@ Create the interactive file browser UI using HTMX for dynamic file/folder listin
 
 You are implementing Step 10 of the FilesOnTheGo project. Your task is to create an interactive file browser UI using HTMX and Tailwind CSS.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: create interactive file browser UI with HTMX
+```
+
+**Full commit message:**
+```
+feat: create interactive file browser UI with HTMX
+
+Build comprehensive file browser interface with dynamic interactions,
+context menus, and keyboard shortcuts using HTMX and Tailwind CSS.
+
+Includes:
+- File list component with grid and list view options
+- Individual file/folder item components with icons
+- Action toolbar with upload, new folder, view toggle, sort
+- Context menu for file operations (download, rename, move, delete, share)
+- File details modal for metadata display
+- Main file browser page with breadcrumb navigation
+- HTMX interactions for navigation, downloads, deletes
+- Storage usage indicator
+- Search functionality with debounced input
+- Sort and filter options (name, date, size, type)
+- Multi-select with batch operations
+- Keyboard shortcuts (Delete, Ctrl+A, Escape, arrow keys)
+- Drag and drop upload support (optional)
+- Loading states and error handling
+- Toast notifications for user feedback
+- Responsive design for mobile, tablet, and desktop
+- Accessibility features (ARIA labels, keyboard navigation)
+- UI component tests
+- Integration tests for complete flows
+
+All tests passing
+Accessibility: WCAG 2.1 AA compliant
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create templates/components/file-list.html**

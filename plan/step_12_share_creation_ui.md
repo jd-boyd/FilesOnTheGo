@@ -14,6 +14,50 @@ Create the user interface for creating and managing share links with permission 
 
 You are implementing Step 12 of the FilesOnTheGo project. Your task is to create an intuitive share link management UI with HTMX.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: build share creation and management UI
+```
+
+**Full commit message:**
+```
+feat: build share creation and management UI
+
+Create comprehensive interface for creating and managing share links
+with permission selection, password protection, and access logs.
+
+Includes:
+- Share button in context menus
+- Share modal dialog for creation and management
+- Permission type selector (read, read_upload, upload_only)
+- Password protection toggle and input
+- Expiration date picker with presets
+- Share link display with copy-to-clipboard
+- QR code generation for shares (optional)
+- Existing shares list with metadata
+- Share revocation functionality
+- Access logs viewer with statistics
+- Share management page for all user shares
+- Copy to clipboard with success feedback
+- HTMX form submissions for share operations
+- JavaScript utilities for toggles and presets
+- Share URL formatting and truncation
+- Permission badges with color coding
+- Responsive design for all devices
+- Accessibility features
+- UI component tests
+- Integration tests for share workflows
+
+All tests passing
+Accessibility: Keyboard navigation and screen reader support
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create templates/components/share-button.html**
