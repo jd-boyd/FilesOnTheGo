@@ -32,9 +32,9 @@ type Config struct {
 	JWTSecret string
 
 	// Feature Flags
-	PublicRegistration  bool
-	EmailVerification   bool
-	RequireEmailAuth    bool
+	PublicRegistration bool
+	EmailVerification  bool
+	RequireEmailAuth   bool
 
 	// User Quota Configuration
 	DefaultUserQuota int64 // in bytes, 0 means unlimited
@@ -66,9 +66,9 @@ func Load() (*Config, error) {
 		JWTSecret: getEnv("JWT_SECRET", ""),
 
 		// Feature Flags
-		PublicRegistration:  getEnvBool("PUBLIC_REGISTRATION", true),
-		EmailVerification:   getEnvBool("EMAIL_VERIFICATION", false),
-		RequireEmailAuth:    getEnvBool("REQUIRE_EMAIL_AUTH", true),
+		PublicRegistration: getEnvBool("PUBLIC_REGISTRATION", true),
+		EmailVerification:  getEnvBool("EMAIL_VERIFICATION", false),
+		RequireEmailAuth:   getEnvBool("REQUIRE_EMAIL_AUTH", true),
 
 		// User Quota Configuration
 		DefaultUserQuota: getEnvInt64("DEFAULT_USER_QUOTA", 10*1024*1024*1024), // Default: 10GB

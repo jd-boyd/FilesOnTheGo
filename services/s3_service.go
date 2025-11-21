@@ -20,11 +20,11 @@ import (
 
 // Custom error types for S3 operations
 var (
-	ErrFileNotFound  = errors.New("file not found in S3")
-	ErrUploadFailed  = errors.New("failed to upload file to S3")
-	ErrDeleteFailed  = errors.New("failed to delete file from S3")
-	ErrInvalidKey    = errors.New("invalid S3 key")
-	ErrInvalidConfig = errors.New("invalid S3 configuration")
+	ErrFileNotFound     = errors.New("file not found in S3")
+	ErrUploadFailed     = errors.New("failed to upload file to S3")
+	ErrDeleteFailed     = errors.New("failed to delete file from S3")
+	ErrInvalidKey       = errors.New("invalid S3 key")
+	ErrInvalidConfig    = errors.New("invalid S3 configuration")
 	ErrConnectionFailed = errors.New("failed to connect to S3")
 )
 
@@ -75,11 +75,11 @@ type S3Client interface {
 
 // S3ServiceImpl implements the S3Service interface
 type S3ServiceImpl struct {
-	client       S3Client      // Interface for mockable operations
-	concreteClient *s3.Client  // Concrete client for advanced operations (presigning, upload manager)
-	bucket       string
-	region       string
-	endpoint     string
+	client         S3Client   // Interface for mockable operations
+	concreteClient *s3.Client // Concrete client for advanced operations (presigning, upload manager)
+	bucket         string
+	region         string
+	endpoint       string
 }
 
 // NewS3Service creates a new S3 service instance and validates the connection
