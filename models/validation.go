@@ -242,6 +242,11 @@ func HasDangerousExtension(filename string) bool {
 
 // NormalizePath normalizes a path to use forward slashes and removes redundant elements
 func NormalizePath(path string) string {
+	// Handle empty path as root
+	if path == "" || path == "/" {
+		return "/"
+	}
+
 	// Convert backslashes to forward slashes
 	path = strings.ReplaceAll(path, "\\", "/")
 
