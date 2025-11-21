@@ -15,6 +15,51 @@ Create the public-facing page for accessing shared files and directories, with p
 
 You are implementing Step 13 of the FilesOnTheGo project. Your task is to create a public share access page that respects permissions and provides appropriate UI based on share type.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: implement public share access page with permission enforcement
+```
+
+**Full commit message:**
+```
+feat: implement public share access page with permission enforcement
+
+Create public-facing share page with password protection, permission-
+based UI, and comprehensive access logging.
+
+Includes:
+- Public share page accessible without authentication
+- Password prompt for protected shares with validation
+- Share validation handler with expiration enforcement
+- Permission-based UI (read, read_upload, upload_only)
+- Single file share view with download functionality
+- Directory share view with file listing
+- Upload-only view hiding download capabilities
+- File download endpoint for shares
+- File upload endpoint for shares
+- Access logging for all share interactions
+- Share expiration warnings
+- Share type indicators with descriptions
+- Error states (not found, expired, wrong password)
+- Rate limiting on password attempts
+- Session-based password validation
+- Clean, minimal public-facing design
+- Responsive layout for all devices
+- HTMX interactions for uploads
+- Handler tests for all scenarios
+- Integration tests for complete flows
+- Security tests for permission enforcement
+
+All tests passing
+Security: Rate limiting, permission enforcement validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create templates/pages/public-share.html**

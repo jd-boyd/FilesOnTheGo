@@ -13,6 +13,52 @@ Create comprehensive security tests to verify the application is resistant to co
 
 You are implementing Step 15 of the FilesOnTheGo project. Your task is to create thorough security tests covering OWASP Top 10 and other security concerns.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+security: add comprehensive security test suite covering OWASP Top 10
+```
+
+**Full commit message:**
+```
+security: add comprehensive security test suite covering OWASP Top 10
+
+Create thorough security tests verifying application resistance to
+common vulnerabilities and attack vectors.
+
+Includes:
+- Authentication security tests (bypass, token theft, session)
+- Authorization tests (access control, privilege escalation)
+- Path traversal prevention tests
+- Null byte injection tests
+- SQL injection prevention tests
+- Command injection tests
+- XSS prevention tests
+- SSRF protection tests
+- File upload security tests (size, MIME, malicious names)
+- Share token security tests (unpredictability, enumeration)
+- Password brute force protection with rate limiting
+- Timing attack resistance tests
+- Share expiration enforcement tests
+- Session security tests (fixation, hijacking)
+- Information disclosure prevention tests
+- Cryptography tests (bcrypt, secure random)
+- Rate limiting tests for all endpoints
+- S3 security tests (access control, pre-signed URLs)
+- Dependency vulnerability checks
+- Security headers validation
+- Security test documentation
+- OWASP Top 10 coverage mapping
+
+All tests passing
+Security: No vulnerabilities detected
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create Authentication Security Tests (tests/security/auth_security_test.go)**

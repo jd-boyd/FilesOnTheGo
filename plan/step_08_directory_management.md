@@ -14,6 +14,48 @@ Implement directory creation, deletion, navigation, listing, and move operations
 
 You are implementing Step 08 of the FilesOnTheGo project. Your task is to create comprehensive directory management functionality.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: implement directory management with path tracking
+```
+
+**Full commit message:**
+```
+feat: implement directory management with path tracking
+
+Add comprehensive directory operations with hierarchical path management,
+breadcrumb navigation, and recursive operations.
+
+Includes:
+- Directory handler with create, read, update, delete operations
+- Directory listing with files and subdirectories
+- Breadcrumb path generation for navigation
+- Full path calculation and tracking
+- Directory rename with child path updates
+- Directory move operations with circular reference prevention
+- Recursive directory deletion with S3 cleanup
+- Quota tracking updates on directory operations
+- Root directory listing
+- Permission enforcement for all operations
+- Share token support for directory access
+- HTMX and JSON response support
+- Comprehensive error handling
+- Unit tests for all operations
+- Integration tests with path updates
+- Security tests for circular references
+- Performance tests for large directories
+
+Test coverage: 80%+
+All tests passing
+Security: Circular reference prevention and path validation
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create handlers/directory_handler.go**

@@ -14,6 +14,51 @@ Implement the share link service for creating, managing, and accessing shared fi
 
 You are implementing Step 09 of the FilesOnTheGo project. Your task is to create comprehensive share link functionality with security features.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+security: implement share service with password protection and expiration
+```
+
+**Full commit message:**
+```
+security: implement share service with password protection and expiration
+
+Add comprehensive share link system with cryptographic tokens, password
+protection, expiration, and rate limiting.
+
+Includes:
+- ShareService interface with complete share management
+- Share creation with cryptographically secure UUID v4 tokens
+- Password protection with bcrypt hashing (cost 12)
+- Configurable expiration dates
+- Share token validation with expiration checks
+- Constant-time password comparison to prevent timing attacks
+- Rate limiting (5 attempts/minute) against brute force
+- Share revocation functionality
+- User share listing and management
+- Share expiration updates
+- Access logging with IP, user agent, and action tracking
+- Access count tracking per share
+- Share handler with REST endpoints
+- Public share access page
+- Password validation endpoint
+- Share URL generation
+- Unit tests for all service methods
+- Integration tests for complete flows
+- Security tests for timing attacks and rate limiting
+- Performance tests for high-load scenarios
+
+Test coverage: 90%+
+All tests passing
+Security: Token generation, password hashing, rate limiting validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create services/share_service.go**

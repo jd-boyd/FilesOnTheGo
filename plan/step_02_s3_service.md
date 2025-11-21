@@ -13,6 +13,42 @@ Implement the S3 service layer that handles all interactions with S3-compatible 
 
 You are implementing Step 02 of the FilesOnTheGo project. Your task is to create a comprehensive S3 service with full test coverage.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: implement S3 service layer with comprehensive security
+```
+
+**Full commit message:**
+```
+feat: implement S3 service layer with comprehensive security
+
+Add complete S3 service implementation for file storage operations
+using AWS SDK v2 with support for S3-compatible storage providers.
+
+Includes:
+- S3Service interface with 8 core methods (upload, download, delete, etc.)
+- Streaming upload support for large files with multipart handling
+- Pre-signed URL generation with configurable expiration
+- File metadata retrieval and existence checking
+- Batch delete operations for efficiency
+- Path traversal protection in S3 key generation
+- Custom error types with context wrapping
+- Comprehensive structured logging for all operations
+- 40+ unit tests with mocking and security tests
+- Performance benchmarks for upload operations
+- Interface-based design for mockable testing
+
+Test coverage: 80%+
+All tests passing
+Security: Path traversal prevention validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create services/s3_service.go**

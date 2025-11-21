@@ -14,6 +14,49 @@ Create a user-friendly file upload interface with drag-and-drop, progress indica
 
 You are implementing Step 11 of the FilesOnTheGo project. Your task is to create an intuitive file upload UI with progress tracking and drag-and-drop support.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: create file upload UI with drag-and-drop support
+```
+
+**Full commit message:**
+```
+feat: create file upload UI with drag-and-drop support
+
+Build comprehensive file upload interface with drag-and-drop,
+progress tracking, and multi-file support using HTMX and JavaScript.
+
+Includes:
+- Upload button component in toolbar
+- Upload modal dialog with file selection
+- Drag-and-drop zone with visual feedback
+- Progress indicators with percentage and bars
+- Multi-file upload with queue management
+- File validation (size, type) before upload
+- Sequential or parallel upload options
+- Error handling for all upload scenarios
+- Success feedback with toast notifications
+- Upload cancellation support
+- File previews for images
+- Keyboard shortcuts (Ctrl+U, Escape)
+- Upload restrictions display
+- HTMX integration for seamless updates
+- JavaScript utilities for drag-and-drop
+- Responsive design for all devices
+- Accessibility features
+- UI component tests
+- Integration tests for upload flows
+
+All tests passing
+Accessibility: Keyboard navigation and ARIA labels
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create templates/components/upload-button.html**

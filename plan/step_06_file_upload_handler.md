@@ -15,6 +15,48 @@ Implement the file upload handler with multipart form processing, S3 upload inte
 
 You are implementing Step 06 of the FilesOnTheGo project. Your task is to create a comprehensive file upload handler with security, quota enforcement, and tests.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: implement file upload handler with quota enforcement
+```
+
+**Full commit message:**
+```
+feat: implement file upload handler with quota enforcement
+
+Add complete file upload endpoint with multipart processing, S3
+integration, security validation, and quota management.
+
+Includes:
+- File upload handler with POST /api/files/upload endpoint
+- Multipart form data parsing and validation
+- Authentication and share token support
+- Permission validation using PermissionService
+- Quota checking and enforcement
+- Filename sanitization with path traversal prevention
+- File size and MIME type validation
+- Unique S3 key generation
+- Database metadata storage
+- User quota tracking and updates
+- HTMX and JSON response support
+- Comprehensive error handling for all scenarios
+- Structured logging for upload operations
+- Unit tests with mocking
+- Integration tests with end-to-end flows
+- Security tests for path traversal and injection
+- Performance benchmarks
+
+Test coverage: 80%+
+All tests passing
+Security: Input validation and sanitization validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create handlers/file_upload_handler.go**

@@ -15,6 +15,46 @@ Implement the file download handler with permission validation, pre-signed URL g
 
 You are implementing Step 07 of the FilesOnTheGo project. Your task is to create a secure file download handler with pre-signed URLs and streaming support.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: implement secure file download handler with pre-signed URLs
+```
+
+**Full commit message:**
+```
+feat: implement secure file download handler with pre-signed URLs
+
+Add file download endpoint with S3 pre-signed URLs, streaming support,
+batch downloads, and comprehensive access logging.
+
+Includes:
+- File download handler with GET /api/files/{file_id}/download
+- Pre-signed S3 URL generation with configurable expiration
+- Direct streaming option for bandwidth tracking
+- Batch download with ZIP file creation
+- Directory download with recursive file collection
+- Share token access support with permission validation
+- Upload-only share download prevention
+- Access logging for audit trails
+- Proper HTTP headers (Content-Type, Content-Disposition, etc.)
+- Range request support for video streaming (optional)
+- Thumbnail/preview generation (optional)
+- Unit tests with mocking
+- Integration tests with end-to-end flows
+- Security tests for unauthorized access
+- Performance tests for various file sizes
+
+Test coverage: 80%+
+All tests passing
+Security: Permission validation and upload-only enforcement validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create handlers/file_download_handler.go**

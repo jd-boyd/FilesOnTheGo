@@ -13,6 +13,42 @@ Create PocketBase collections (database schema) for files, directories, and shar
 
 You are implementing Step 03 of the FilesOnTheGo project. Your task is to create the database schema and models for FilesOnTheGo.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+feat: implement database schema and models with validation
+```
+
+**Full commit message:**
+```
+feat: implement database schema and models with validation
+
+Create PocketBase collections, migrations, and model structs with
+comprehensive validation and security features.
+
+Includes:
+- PocketBase migrations for all collections (files, directories, shares, users)
+- Collection indexes for optimized queries
+- Collection API rules for access control
+- Model structs with helper methods (File, Directory, Share)
+- Path sanitization functions with traversal prevention
+- Filename validation with null byte and control character checks
+- Share expiration and permission validation logic
+- Breadcrumb navigation helpers
+- 100% test coverage for validation functions
+- Security tests for path traversal and injection attacks
+- Integration tests for cascade deletes
+
+Test coverage: 80%+ overall, 100% for validation
+All tests passing
+Security: Path traversal and injection prevention validated
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Create migrations/001_initial_schema.go**

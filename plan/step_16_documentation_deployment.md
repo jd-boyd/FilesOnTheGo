@@ -13,6 +13,50 @@ Create comprehensive documentation, deployment guides, and production-ready conf
 
 You are implementing Step 16 of the FilesOnTheGo project. Your task is to create complete documentation and deployment configurations for production use.
 
+### Commit Message Instructions
+
+When you complete this step and are ready to commit your changes, use the following commit message format:
+
+**First line (used for PR):**
+```
+docs: add comprehensive documentation and deployment configurations
+```
+
+**Full commit message:**
+```
+docs: add comprehensive documentation and deployment configurations
+
+Create complete documentation suite and production-ready deployment
+configurations for multiple platforms.
+
+Includes:
+- Comprehensive README with quick start and features
+- API documentation for all endpoints
+- Deployment guides (Docker, systemd, manual)
+- Docker configuration (Dockerfile, docker-compose.yml)
+- Systemd service file with security hardening
+- Nginx reverse proxy configuration with HTTPS
+- Configuration guide for all environment variables
+- S3 provider setup guides (AWS, MinIO, Backblaze)
+- Backup and restore procedures with scripts
+- Monitoring guide with metrics and alerting
+- Upgrade guide with version compatibility
+- Troubleshooting guide for common issues
+- Production checklist for deployments
+- Contributing guidelines for developers
+- License file (MIT/Apache 2.0)
+- Changelog with version history
+- Architecture documentation (link to DESIGN.md)
+- Deployment scripts for automation
+- Security best practices documentation
+- Performance tuning recommendations
+
+Documentation: Complete and accurate
+Deployment: Tested on Docker and systemd
+```
+
+Use this exact format when committing your work.
+
 ### Tasks
 
 1. **Update README.md**
