@@ -4,6 +4,16 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
+// pointer is a helper function to create string pointers
+func pointer(s string) *string {
+	return &s
+}
+
+// intPointer is a helper function to create int pointers
+func intPointer(i int) *int {
+	return &i
+}
+
 // InitialSchema creates all collections for FilesOnTheGo
 func init() {
 	core.SystemMigrations.Register(func(txApp core.App) error {
@@ -37,11 +47,11 @@ func init() {
 
 		// 2. Create Directories collection
 		directoriesCollection := core.NewBaseCollection("directories")
-		directoriesCollection.ListRule = core.Pointer("@request.auth.id = user.id")
-		directoriesCollection.ViewRule = core.Pointer("@request.auth.id = user.id")
-		directoriesCollection.CreateRule = core.Pointer("@request.auth.id = user.id")
-		directoriesCollection.UpdateRule = core.Pointer("@request.auth.id = user.id")
-		directoriesCollection.DeleteRule = core.Pointer("@request.auth.id = user.id")
+		directoriesCollection.ListRule = pointer("@request.auth.id = user.id")
+		directoriesCollection.ViewRule = pointer("@request.auth.id = user.id")
+		directoriesCollection.CreateRule = pointer("@request.auth.id = user.id")
+		directoriesCollection.UpdateRule = pointer("@request.auth.id = user.id")
+		directoriesCollection.DeleteRule = pointer("@request.auth.id = user.id")
 
 		directoriesCollection.Fields.Add(
 			&core.TextField{
@@ -65,7 +75,7 @@ func init() {
 				Required:      true,
 				CollectionId:  usersCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -76,7 +86,7 @@ func init() {
 				Required:      false,
 				CollectionId:  "", // Will be set after creation
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -100,11 +110,11 @@ func init() {
 
 		// 3. Create Files collection
 		filesCollection := core.NewBaseCollection("files")
-		filesCollection.ListRule = core.Pointer("@request.auth.id = user.id")
-		filesCollection.ViewRule = core.Pointer("@request.auth.id = user.id")
-		filesCollection.CreateRule = core.Pointer("@request.auth.id = user.id")
-		filesCollection.UpdateRule = core.Pointer("@request.auth.id = user.id")
-		filesCollection.DeleteRule = core.Pointer("@request.auth.id = user.id")
+		filesCollection.ListRule = pointer("@request.auth.id = user.id")
+		filesCollection.ViewRule = pointer("@request.auth.id = user.id")
+		filesCollection.CreateRule = pointer("@request.auth.id = user.id")
+		filesCollection.UpdateRule = pointer("@request.auth.id = user.id")
+		filesCollection.DeleteRule = pointer("@request.auth.id = user.id")
 
 		filesCollection.Fields.Add(
 			&core.TextField{
@@ -128,7 +138,7 @@ func init() {
 				Required:      true,
 				CollectionId:  usersCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -138,7 +148,7 @@ func init() {
 				Required:      false,
 				CollectionId:  directoriesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -194,11 +204,11 @@ func init() {
 
 		// 4. Create Shares collection
 		sharesCollection := core.NewBaseCollection("shares")
-		sharesCollection.ListRule = core.Pointer("@request.auth.id = user.id")
-		sharesCollection.ViewRule = core.Pointer("@request.auth.id = user.id")
-		sharesCollection.CreateRule = core.Pointer("@request.auth.id = user.id")
-		sharesCollection.UpdateRule = core.Pointer("@request.auth.id = user.id")
-		sharesCollection.DeleteRule = core.Pointer("@request.auth.id = user.id")
+		sharesCollection.ListRule = pointer("@request.auth.id = user.id")
+		sharesCollection.ViewRule = pointer("@request.auth.id = user.id")
+		sharesCollection.CreateRule = pointer("@request.auth.id = user.id")
+		sharesCollection.UpdateRule = pointer("@request.auth.id = user.id")
+		sharesCollection.DeleteRule = pointer("@request.auth.id = user.id")
 
 		sharesCollection.Fields.Add(
 			&core.RelationField{
@@ -206,7 +216,7 @@ func init() {
 				Required:      true,
 				CollectionId:  usersCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -225,7 +235,7 @@ func init() {
 				Required:      false,
 				CollectionId:  filesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -235,7 +245,7 @@ func init() {
 				Required:      false,
 				CollectionId:  directoriesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
@@ -291,11 +301,11 @@ func init() {
 
 		// 5. Create Share Access Logs collection
 		shareAccessLogsCollection := core.NewBaseCollection("share_access_logs")
-		shareAccessLogsCollection.ListRule = core.Pointer("@request.auth.id = share.user.id")
-		shareAccessLogsCollection.ViewRule = core.Pointer("@request.auth.id = share.user.id")
-		shareAccessLogsCollection.CreateRule = core.Pointer("") // Allow any (backend only)
-		shareAccessLogsCollection.UpdateRule = core.Pointer("") // Deny
-		shareAccessLogsCollection.DeleteRule = core.Pointer("") // Deny
+		shareAccessLogsCollection.ListRule = pointer("@request.auth.id = share.user.id")
+		shareAccessLogsCollection.ViewRule = pointer("@request.auth.id = share.user.id")
+		shareAccessLogsCollection.CreateRule = pointer("") // Allow any (backend only)
+		shareAccessLogsCollection.UpdateRule = pointer("") // Deny
+		shareAccessLogsCollection.DeleteRule = pointer("") // Deny
 
 		shareAccessLogsCollection.Fields.Add(
 			&core.RelationField{
@@ -303,7 +313,7 @@ func init() {
 				Required:      true,
 				CollectionId:  sharesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     core.Pointer(1),
+				MaxSelect:     intPointer(1),
 			},
 		)
 
