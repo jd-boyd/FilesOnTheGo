@@ -105,29 +105,21 @@ func NewS3Service(cfg *config.Config) (*S3ServiceImpl, error) {
 		"",
 	)
 
-	// Create custom endpoint resolver for S3-compatible services (like MinIO)
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		if cfg.S3Endpoint != "" {
-			return aws.Endpoint{
-				URL:           cfg.S3Endpoint,
-				SigningRegion: cfg.S3Region,
-			}, nil
-		}
-		// Return default AWS endpoint
-		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
-	})
-
 	// Configure AWS SDK
 	awsCfg := aws.Config{
-		Region:                      cfg.S3Region,
-		Credentials:                 creds,
-		EndpointResolverWithOptions: customResolver,
+		Region:      cfg.S3Region,
+		Credentials: creds,
 	}
 
 	// Create S3 client with path-style addressing for S3-compatible services
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		// Force path-style addressing for compatibility with MinIO and other S3-compatible services
 		o.UsePathStyle = true
+
+		// Set custom endpoint for S3-compatible services (like MinIO)
+		if cfg.S3Endpoint != "" {
+			o.BaseEndpoint = aws.String(cfg.S3Endpoint)
+		}
 	})
 
 	service := &S3ServiceImpl{
