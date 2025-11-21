@@ -39,9 +39,9 @@ func NewDirectoryHandler(
 
 // DirectoryResponse represents the response for directory operations
 type DirectoryResponse struct {
-	Directory   *DirectoryInfo   `json:"directory,omitempty"`
+	Directory   *DirectoryInfo       `json:"directory,omitempty"`
 	Breadcrumbs []*models.Breadcrumb `json:"breadcrumbs,omitempty"`
-	Items       []ItemInfo       `json:"items,omitempty"`
+	Items       []ItemInfo           `json:"items,omitempty"`
 }
 
 // DirectoryInfo represents directory information

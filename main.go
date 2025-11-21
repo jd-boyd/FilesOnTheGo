@@ -3,7 +3,7 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,6 +14,7 @@ import (
 	"github.com/jd-boyd/filesonthego/handlers"
 	_ "github.com/jd-boyd/filesonthego/migrations" // Import migrations for side effects
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
 )
@@ -42,6 +43,8 @@ func main() {
 		Str("s3_region", cfg.S3Region).
 		Int64("max_upload_size", cfg.MaxUploadSize).
 		Bool("public_registration", cfg.PublicRegistration).
+		Bool("tls_enabled", cfg.TLSEnabled).
+		Bool("letsencrypt_enabled", cfg.LetsEncryptEnabled).
 		Msg("Configuration loaded")
 
 	// Initialize template renderer
@@ -92,27 +95,46 @@ func main() {
 		return nil
 	})
 
-	// Log when the server is starting
-	app.OnServe().BindFunc(func(_ *core.ServeEvent) error {
-		logger.Info().
-			Str("address", ":"+cfg.AppPort).
-			Msg("PocketBase HTTP server starting")
-		return nil
-	})
-
 	// Set up graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Handle OS signals for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Start PocketBase in a goroutine
+	// Start PocketBase server in a goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		if err := app.Start(); err != nil {
-			errChan <- err
+		defer func() {
+			if r := recover(); r != nil {
+				errChan <- fmt.Errorf("panic: %v", r)
+			}
+		}()
+
+		// Configure server addresses based on TLS settings
+		var httpAddr, httpsAddr string
+		var certificateDomains []string
+
+		if cfg.TLSEnabled {
+			httpsAddr = ":" + cfg.TLSPort
+			if cfg.TLSRedirect {
+				// If TLS redirect is enabled, we'll run HTTP on the standard port for redirects
+				httpAddr = ":" + cfg.AppPort
+			}
+			// Add custom domain for Let's Encrypt if configured
+			if cfg.LetsEncryptEnabled && cfg.LetsEncryptDomain != "" {
+				certificateDomains = append(certificateDomains, cfg.LetsEncryptDomain)
+			}
+		} else {
+			httpAddr = ":" + cfg.AppPort
+		}
+
+		// Use PocketBase's built-in serve function which handles TLS properly
+		if err := apis.Serve(app, apis.ServeConfig{
+			ShowStartBanner: false, // We have our own logging
+			HttpAddr:        httpAddr,
+			HttpsAddr:       httpsAddr,
+			CertificateDomains: certificateDomains,
+		}); err != nil {
+			errChan <- fmt.Errorf("failed to start server: %w", err)
 		}
 	}()
 
@@ -123,20 +145,15 @@ func main() {
 			Str("signal", sig.String()).
 			Msg("Received shutdown signal, initiating graceful shutdown")
 
-		// Create a context with timeout for graceful shutdown
-		shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
-		defer shutdownCancel()
+		// Give some time for graceful shutdown
+		shutdownTimer := time.NewTimer(30 * time.Second)
+		defer shutdownTimer.Stop()
 
-		// Perform graceful shutdown operations here
-		logger.Info().Msg("Graceful shutdown initiated")
-
-		// Wait for shutdown context to complete or timeout
-		<-shutdownCtx.Done()
-
-		if shutdownCtx.Err() == context.DeadlineExceeded {
-			logger.Warn().Msg("Shutdown timeout exceeded, forcing exit")
-		} else {
-			logger.Info().Msg("Shutdown completed successfully")
+		select {
+		case <-time.After(30 * time.Second):
+			logger.Warn().Msg("Shutdown timeout exceeded")
+		case <-errChan:
+			logger.Info().Msg("Server shutdown completed")
 		}
 
 	case err := <-errChan:
