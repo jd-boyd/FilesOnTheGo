@@ -143,7 +143,7 @@ func RequireValidShare(ps services.PermissionService) func(next HandlerFunc) Han
 				// Check if password is required but not provided
 				if sharePerms != nil && sharePerms.RequiresPassword && password == "" {
 					return e.JSON(http.StatusUnauthorized, map[string]string{
-						"error":            "Password required",
+						"error":             "Password required",
 						"requires_password": "true",
 					})
 				}
