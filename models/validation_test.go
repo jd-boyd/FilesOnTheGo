@@ -53,8 +53,8 @@ func TestSanitizeFilename_PreventPathTraversal(t *testing.T) {
 		{
 			name:     "control characters",
 			input:    "file\n\r\t.txt",
-			expected: "file.txt",
-			wantErr:  false,
+			expected: "",
+			wantErr:  true,
 		},
 		{
 			name:     "only control characters",
