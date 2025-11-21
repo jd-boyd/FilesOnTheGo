@@ -14,7 +14,6 @@ import (
 	"github.com/jd-boyd/filesonthego/config"
 	"github.com/jd-boyd/filesonthego/models"
 	"github.com/jd-boyd/filesonthego/services"
-	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -3,7 +3,6 @@ package security
 import (
 	"bytes"
 	"mime/multipart"
-	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
