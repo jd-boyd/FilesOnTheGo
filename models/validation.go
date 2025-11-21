@@ -30,6 +30,13 @@ func SanitizeFilename(filename string) (string, error) {
 		return "", ErrNullByte
 	}
 
+	// Check for control characters (0-31 and 127) - reject rather than silently remove
+	for _, r := range filename {
+		if r < 32 || r == 127 {
+			return "", fmt.Errorf("%w: control character detected", ErrInvalidCharacter)
+		}
+	}
+
 	// Normalize backslashes to forward slashes for cross-platform compatibility
 	// This ensures Windows-style paths are handled correctly on Linux
 	filename = strings.ReplaceAll(filename, "\\", "/")
@@ -43,7 +50,8 @@ func SanitizeFilename(filename string) (string, error) {
 		return "", fmt.Errorf("%w: filename too long (max 255 characters)", ErrTooLong)
 	}
 
-	// Remove control characters (0-31 and 127)
+	// Additional cleaning: remove any remaining control characters that may have
+	// been introduced by filepath.Base or other processing
 	cleaned := strings.Map(func(r rune) rune {
 		if r < 32 || r == 127 {
 			return -1 // Remove character
