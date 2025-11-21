@@ -9,11 +9,6 @@ func pointer(s string) *string {
 	return &s
 }
 
-// intPointer is a helper function to create int pointers
-func intPointer(i int) *int {
-	return &i
-}
-
 // InitialSchema creates all collections for FilesOnTheGo
 func init() {
 	core.SystemMigrations.Register(func(txApp core.App) error {
@@ -75,7 +70,7 @@ func init() {
 				Required:      true,
 				CollectionId:  usersCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -86,7 +81,7 @@ func init() {
 				Required:      false,
 				CollectionId:  "", // Will be set after creation
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -138,7 +133,7 @@ func init() {
 				Required:      true,
 				CollectionId:  usersCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -148,7 +143,7 @@ func init() {
 				Required:      false,
 				CollectionId:  directoriesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -216,7 +211,7 @@ func init() {
 				Required:      true,
 				CollectionId:  usersCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -235,7 +230,7 @@ func init() {
 				Required:      false,
 				CollectionId:  filesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -245,7 +240,7 @@ func init() {
 				Required:      false,
 				CollectionId:  directoriesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
@@ -313,7 +308,7 @@ func init() {
 				Required:      true,
 				CollectionId:  sharesCollection.Id,
 				CascadeDelete: true,
-				MaxSelect:     intPointer(1),
+				MaxSelect:     1,
 			},
 		)
 
