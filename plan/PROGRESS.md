@@ -4,9 +4,9 @@ This file tracks the progress of implementing the FilesOnTheGo project across 16
 
 ## Overall Progress
 
-**Completed:** 4 / 16 steps (25%)
+**Completed:** 5 / 16 steps (31%)
 **In Progress:** 0 / 16 steps
-**Pending:** 12 / 16 steps
+**Pending:** 11 / 16 steps
 
 ---
 
@@ -121,15 +121,26 @@ Read plan/step_07_file_download_handler.md and implement Step 07: File download 
 
 ---
 
-### ⏳ Step 08: Directory Management
-**Status:** ⏳ PENDING
+### ✅ Step 08: Directory Management
+**Status:** ✅ COMPLETED
 **Duration:** 60 minutes
 **Dependencies:** Step 03, Step 04
+**Completion Date:** 2025-11-21
 
 **Prompt to Paste:**
 ```
 Read plan/step_08_directory_management.md and implement Step 08: Directory management with CRUD operations. Follow all instructions including tests and commit message format.
 ```
+
+**Completion Summary:**
+- ✅ Created handlers/directory_handler.go with all CRUD endpoints
+- ✅ Implemented directory create, list, delete, rename, move operations
+- ✅ Added breadcrumb generation and path calculation
+- ✅ Implemented circular reference prevention for move operations
+- ✅ Added recursive directory deletion with S3 cleanup
+- ✅ Permission enforcement for all operations
+- ✅ HTMX and JSON response support
+- ✅ Comprehensive unit tests in handlers/directory_handler_test.go
 
 ---
 
@@ -278,21 +289,21 @@ Read plan/step_16_documentation_deployment.md and implement Step 16: Documentati
 ## Statistics
 
 ### By Status
-- **Completed:** 4 steps (25%)
+- **Completed:** 5 steps (31%)
 - **In Progress:** 0 steps (0%)
-- **Pending:** 12 steps (75%)
+- **Pending:** 11 steps (69%)
 
 ### By Group
 - **Group 1 (Foundation):** 1/1 completed (100%)
 - **Group 2 (Core Services):** 4/4 completed (100%)
-- **Group 3 (Business Logic):** 0/4 completed (0%)
+- **Group 3 (Business Logic):** 1/4 completed (25%)
 - **Group 4 (Frontend):** 0/4 completed (0%)
 - **Group 5 (QA):** 0/3 completed (0%)
 
 ### Time Estimates
-- **Completed:** ~165 minutes (~2.75 hours)
-- **Remaining:** ~225 minutes (~3.75 hours)
-- **Total:** ~390 minutes (~6.5 hours)
+- **Completed:** ~225 minutes (~3.75 hours)
+- **Remaining:** ~405 minutes (~6.75 hours)
+- **Total:** ~630 minutes (~10.5 hours)
 
 ---
 
