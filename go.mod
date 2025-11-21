@@ -1,6 +1,6 @@
 module github.com/jd-boyd/filesonthego
 
-go 1.21
+go 1.23
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.30.3
@@ -53,8 +53,8 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	modernc.org/libc v1.70.2 // indirect
-	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/libc v1.61.2 // indirect
+	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect
-	modernc.org/sqlite v1.40.0 // indirect
+	modernc.org/sqlite v1.34.1 // indirect
 )
