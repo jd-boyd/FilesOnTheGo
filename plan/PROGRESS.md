@@ -79,11 +79,12 @@ Last Updated: 2025-11-21
 - **Step 01** (2025-11-21): Successfully set up project scaffolding with PocketBase, Go modules, and basic configuration
 - **Step 02** (2025-11-21): Implemented comprehensive S3 service layer with:
   - 8 core methods (upload, download, delete, presigned URLs, metadata, batch operations)
-  - AWS SDK v2 integration with S3-compatible storage support
-  - Path traversal protection and filename sanitization
+  - AWS SDK v2 integration (v1.40.0+) with S3-compatible storage support
+  - Path traversal protection with Windows/Unix path sanitization
   - 40+ unit tests with mocking, security tests, and benchmarks
   - Custom error types and comprehensive structured logging
-  - 100% coverage for security-critical code
+  - 76.6% test coverage with all tests passing
+  - Interface-based design for mockable testing
 
 ### In Progress Steps
 - **Steps 03-05**: Group 2 core services (database models, permission service, basic UI) are currently being implemented
