@@ -1,3 +1,5 @@
+// Package config provides configuration management for FilesOnTheGo.
+// It handles environment variables, default values, and validation for application settings.
 package config
 
 import (

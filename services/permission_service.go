@@ -1,3 +1,5 @@
+// Package services provides business logic services for FilesOnTheGo.
+// It includes S3 operations, permission management, and share link functionality.
 package services
 
 import (
