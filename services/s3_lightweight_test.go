@@ -31,17 +31,12 @@ func createMockS3Server(t *testing.T) (*httptest.Server, map[string][]byte) {
 		}
 
 		// Parse URL to get key
-		path := strings.TrimPrefix(r.URL.Path, "/test-bucket/")
+		// Remove /test-bucket prefix, with or without trailing slash
+		path := strings.TrimPrefix(r.URL.Path, "/test-bucket")
+		path = strings.TrimPrefix(path, "/")
 
 		switch r.Method {
 		case "GET":
-			if r.URL.Query().Get("delete") != "" {
-				// Handle batch delete
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult/>`))
-				return
-			}
-
 			// Download file
 			if data, exists := files[path]; exists {
 				w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
@@ -56,6 +51,39 @@ func createMockS3Server(t *testing.T) (*httptest.Server, map[string][]byte) {
 				w.Write([]byte(errorXML))
 			}
 
+		case "POST":
+			if r.URL.Query().Has("delete") {
+				// Handle batch delete - parse delete XML payload
+				body, _ := io.ReadAll(r.Body)
+				deleteXML := string(body)
+
+				// Simple XML parsing to extract keys (for testing purposes)
+				// Look for <Key>...</Key> patterns
+				keyStart := strings.Index(deleteXML, "<Key>")
+				for keyStart != -1 {
+					keyEnd := strings.Index(deleteXML[keyStart:], "</Key>")
+					if keyEnd == -1 {
+						break
+					}
+					keyEnd += keyStart
+					key := deleteXML[keyStart+5:keyEnd]
+					if key != "" {
+						// Remove the bucket prefix if present
+						key = strings.TrimPrefix(key, "/test-bucket/")
+						key = strings.TrimPrefix(key, "/")
+						delete(files, key)
+					}
+					keyStart = strings.Index(deleteXML[keyEnd:], "<Key>")
+					if keyStart != -1 {
+						keyStart += keyEnd
+					}
+				}
+
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?><DeleteResult/>`))
+				return
+			}
+
 		case "PUT":
 			// Upload file
 			body, _ := io.ReadAll(r.Body)
@@ -63,6 +91,13 @@ func createMockS3Server(t *testing.T) (*httptest.Server, map[string][]byte) {
 			w.WriteHeader(http.StatusOK)
 
 		case "HEAD":
+			// Check if this is a bucket-level HEAD request (for bucket access check)
+			if path == "" || path == "/" {
+				// Bucket exists and is accessible
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
 			// Check file exists
 			if _, exists := files[path]; exists {
 				data := files[path]
@@ -740,12 +775,14 @@ func createMockMultipartS3Server(t *testing.T) (*httptest.Server, map[string][]b
 		}
 
 		// Parse URL to get key and parameters
-		path := strings.TrimPrefix(r.URL.Path, "/test-bucket/")
+		// Remove /test-bucket prefix, with or without trailing slash
+		path := strings.TrimPrefix(r.URL.Path, "/test-bucket")
+		path = strings.TrimPrefix(path, "/")
 		query := r.URL.Query()
 
 		switch r.Method {
 		case "POST":
-			if query.Get("uploads") != "" {
+			if query.Has("uploads") {
 				// Initiate multipart upload
 				uploadID := fmt.Sprintf("upload_%d", partCounter)
 				partCounter++
@@ -849,6 +886,13 @@ func createMockMultipartS3Server(t *testing.T) (*httptest.Server, map[string][]b
 			}
 
 		case "HEAD":
+			// Check if this is a bucket-level HEAD request (for bucket access check)
+			if path == "" || path == "/" {
+				// Bucket exists and is accessible
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
 			// Check file exists
 			if _, exists := files[path]; exists {
 				data := files[path]

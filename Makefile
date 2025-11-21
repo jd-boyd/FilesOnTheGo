@@ -26,12 +26,13 @@ help:
 	@echo "  deps        Install dependencies"
 	@echo "  build       Build the binary for current platform"
 	@echo "  build-all   Build binaries for multiple platforms"
-	@echo "  test        Run all tests"
-	@echo "  test-unit   Run unit tests only"
-	@echo "  test-integration Run integration tests only"
+	@echo "  test        Run all tests with detailed summary (recommended)"
+	@echo "  test-unit   Run unit tests only with detailed summary"
+	@echo "  test-integration Run integration tests only with detailed summary"
 	@echo "  test-container Run container integration tests with full setup"
 	@echo "  test-container-only Run container tests without setup"
-	@echo "  test-coverage Run tests with coverage report"
+	@echo "  test-verbose Run tests with traditional verbose output (for debugging)"
+	@echo "  test-coverage Run tests with coverage report and detailed summary"
 	@echo "  benchmark   Run benchmark tests"
 	@echo "  race        Run tests with race detection"
 	@echo "  lint        Run code linter"
@@ -121,45 +122,50 @@ build-all: clean
 # Testing
 .PHONY: test
 test:
-	@echo "Running all tests..."
-	go test -v ./...
+	@echo "Running all tests with detailed summary..."
+	@go test -json ./... 2>&1 | go run tools/test-summary/main.go
 
 .PHONY: test-unit
 test-unit:
-	@echo "Running unit tests..."
-	go test -v -short ./...
+	@echo "Running unit tests with detailed summary..."
+	@go test -json -short ./... 2>&1 | go run tools/test-summary/main.go
 
 .PHONY: test-integration
 test-integration:
-	@echo "Running integration tests..."
+	@echo "Running integration tests with detailed summary..."
 	@if [ -d "tests/integration" ]; then \
-		go test -v -tags=integration ./tests/integration/...; \
+		go test -json -tags=integration ./tests/integration/... 2>&1 | go run tools/test-summary/main.go; \
 	else \
 		echo "No integration tests found in tests/integration/"; \
 	fi
 
 .PHONY: test-container
 test-container:
-	@echo "Running container integration tests..."
+	@echo "Running container integration tests with detailed summary..."
 	@if [ -f "run_tests.sh" ]; then \
 		./run_tests.sh; \
 	else \
 		echo "Container test runner not found. Using go test directly..."; \
-		go test -v -tags=container ./tests/integration/...; \
+		go test -json -tags=container ./tests/integration/... 2>&1 | go run tools/test-summary/main.go; \
 	fi
 
 .PHONY: test-container-only
 test-container-only:
 	@echo "Running container integration tests only (no setup)..."
-	go test -v -tags=container ./tests/integration/... -timeout=5m
+	@go test -json -tags=container ./tests/integration/... -timeout=5m 2>&1 | go run tools/test-summary/main.go
+
+.PHONY: test-verbose
+test-verbose:
+	@echo "Running tests with verbose output (no JSON parsing)..."
+	@go test -v ./...
 
 .PHONY: test-coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	go test -coverprofile=coverage.out ./...
+	@go test -json -coverprofile=coverage.out ./... 2>&1 | go run tools/test-summary/main.go
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
-	@go test -cover ./... | grep "coverage:" | tail -1
+	@go test -cover ./... 2>/dev/null | grep "coverage:" | tail -1 || echo "Coverage data available in coverage.out"
 
 .PHONY: benchmark
 benchmark:

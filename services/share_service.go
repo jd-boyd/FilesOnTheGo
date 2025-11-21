@@ -233,8 +233,12 @@ func (s *ShareServiceImpl) GetShareByID(shareID string) (*ShareInfo, error) {
 
 // ValidateShareAccess validates a share token and optional password
 func (s *ShareServiceImpl) ValidateShareAccess(token, password string) (*ShareAccessInfo, error) {
+	// Check for empty or missing token - treat as invalid for security
 	if token == "" {
-		return nil, errors.New("share token is required")
+		return &ShareAccessInfo{
+			IsValid:      false,
+			ErrorMessage: "Invalid share link",
+		}, nil
 	}
 
 	// Get share by token

@@ -13,6 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// pointer is a helper function to create string pointers
+func pointer(s string) *string {
+	return &s
+}
+
 // setupSecurityTest creates a test app for security testing
 func setupSecurityTest(t *testing.T) *pocketbase.PocketBase {
 	tmpDir, err := os.MkdirTemp("", "pb_security_*")
@@ -23,18 +28,174 @@ func setupSecurityTest(t *testing.T) *pocketbase.PocketBase {
 	})
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
-		DataDir:          tmpDir,
-		DataMaxOpenConns: 10,
-		DataMaxIdleConns: 2,
-		EncryptionEnv:    "test",
+		DefaultDataDir:       tmpDir,
+		DataMaxOpenConns:     10,
+		DataMaxIdleConns:     2,
+		DefaultEncryptionEnv: "test",
 	})
+
+	// Bootstrap to initialize internal PocketBase schema first
+	// This creates the _collections table and other internal schema
+	if err := app.Bootstrap(); err != nil {
+		t.Fatalf("Failed to bootstrap test app: %v", err)
+	}
+
+	// Create the minimal collections needed for security testing
+	if err := createSecurityTestCollections(app); err != nil {
+		t.Fatalf("Failed to create test collections: %v", err)
+	}
 
 	return app
 }
 
+// createSecurityTestCollections creates the minimal collections needed for security testing
+func createSecurityTestCollections(app *pocketbase.PocketBase) error {
+	// Create users collection first (based on PocketBase's default users schema)
+	usersCollection := core.NewBaseCollection("_users")
+	usersCollection.ListRule = nil
+	usersCollection.ViewRule = nil
+	usersCollection.CreateRule = nil
+	usersCollection.UpdateRule = nil
+	usersCollection.DeleteRule = nil
+
+	// Add basic user fields
+	usersCollection.Fields.Add(&core.TextField{
+		Name:     "email",
+		Required: true,
+	})
+	usersCollection.Fields.Add(&core.TextField{
+		Name:     "username",
+		Required: false,
+	})
+	usersCollection.Fields.Add(&core.PasswordField{
+		Name:     "password",
+		Required: true,
+	})
+	usersCollection.Fields.Add(&core.BoolField{
+		Name:     "verified",
+		Required: false,
+	})
+
+	if err := app.Save(usersCollection); err != nil {
+		return err
+	}
+
+	// Create shares collection
+	sharesCollection := core.NewBaseCollection("shares")
+	sharesCollection.ListRule = nil
+	sharesCollection.ViewRule = nil
+	sharesCollection.CreateRule = nil
+	sharesCollection.UpdateRule = nil
+	sharesCollection.DeleteRule = nil
+
+	// Add user relation field first
+	sharesCollection.Fields.Add(&core.RelationField{
+		Name:     "user",
+		Required: true,
+		MaxSelect: 1,
+		CollectionId: usersCollection.Id,
+	})
+
+	// Add resource_type field
+	sharesCollection.Fields.Add(&core.SelectField{
+		Name:      "resource_type",
+		Required:  true,
+		MaxSelect: 1,
+		Values:    []string{"file", "directory"},
+	})
+
+	// Don't add file relation field yet - will add it after files collection exists
+
+	// Add permission_type field
+	sharesCollection.Fields.Add(&core.SelectField{
+		Name:      "permission_type",
+		Required:  true,
+		MaxSelect: 1,
+		Values:    []string{"read", "read_upload", "upload_only"},
+	})
+
+	// Add fields needed for security tests
+	sharesCollection.Fields.Add(&core.TextField{
+		Name:     "share_token",
+		Required: true,
+	})
+	sharesCollection.Fields.Add(&core.TextField{
+		Name:     "password_hash",
+		Required: false,
+	})
+	sharesCollection.Fields.Add(&core.DateField{
+		Name:     "expires_at",
+		Required: false,
+	})
+	sharesCollection.Fields.Add(&core.NumberField{
+		Name:     "access_count",
+		Required: false,
+	})
+
+	if err := app.Save(sharesCollection); err != nil {
+		return err
+	}
+
+	// Create files collection
+	filesCollection := core.NewBaseCollection("files")
+	filesCollection.ListRule = nil
+	filesCollection.ViewRule = nil
+	filesCollection.CreateRule = nil
+	filesCollection.UpdateRule = nil
+	filesCollection.DeleteRule = nil
+
+	// Add fields needed for security tests
+	filesCollection.Fields.Add(&core.TextField{
+		Name:     "name",
+		Required: true,
+	})
+	filesCollection.Fields.Add(&core.TextField{
+		Name:     "s3_key",
+		Required: true,
+	})
+	filesCollection.Fields.Add(&core.NumberField{
+		Name:     "size",
+		Required: true,
+	})
+	filesCollection.Fields.Add(&core.TextField{
+		Name:     "mime_type",
+		Required: false,
+	})
+
+	if err := app.Save(filesCollection); err != nil {
+		return err
+	}
+
+	// Now add the user relation field after the files collection is created
+	filesCollection.Fields.Add(&core.RelationField{
+		Name:     "user",
+		Required: true,
+		MaxSelect: 1,
+		CollectionId: usersCollection.Id,
+	})
+
+	if err := app.Save(filesCollection); err != nil {
+		return err
+	}
+
+	// Add file relation field now that files collection exists
+	sharesCollection.Fields.Add(&core.RelationField{
+		Name:     "file",
+		Required: false,
+		MaxSelect: 1,
+		CollectionId: filesCollection.Id,
+	})
+
+	if err := app.Save(sharesCollection); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func createSecurityTestUser(t *testing.T, app *pocketbase.PocketBase) *core.Record {
-	collection := app.FindCollectionByNameOrId("users")
-	if collection == nil {
+	collection, err := app.FindCollectionByNameOrId("_users")
+	if err != nil {
 		t.Skip("users collection not found")
 	}
 
@@ -43,15 +204,15 @@ func createSecurityTestUser(t *testing.T, app *pocketbase.PocketBase) *core.Reco
 	record.Set("username", "securityuser")
 	record.SetPassword("testpassword")
 
-	err := app.Save(record)
+	err = app.Save(record)
 	require.NoError(t, err)
 
 	return record
 }
 
 func createSecurityTestFile(t *testing.T, app *pocketbase.PocketBase, userID string) *core.Record {
-	collection := app.FindCollectionByNameOrId("files")
-	if collection == nil {
+	collection, err := app.FindCollectionByNameOrId("files")
+	if err != nil {
 		t.Skip("files collection not found")
 	}
 
@@ -62,7 +223,7 @@ func createSecurityTestFile(t *testing.T, app *pocketbase.PocketBase, userID str
 	record.Set("size", 1024)
 	record.Set("mime_type", "text/plain")
 
-	err := app.Save(record)
+	err = app.Save(record)
 	require.NoError(t, err)
 
 	return record
@@ -74,7 +235,7 @@ func TestSecurity_PasswordTimingAttackProtection(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -139,7 +300,7 @@ func TestSecurity_ExpiredShareBlocked(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -173,14 +334,15 @@ func TestSecurity_UnauthorizedShareModification(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
 	// Create two users
 	user1 := createSecurityTestUser(t, app)
 
-	collection := app.FindCollectionByNameOrId("users")
+	collection, err := app.FindCollectionByNameOrId("users")
+	require.NoError(t, err)
 	user2 := core.NewRecord(collection)
 	user2.Set("email", "security2@example.com")
 	user2.Set("username", "securityuser2")
@@ -217,14 +379,15 @@ func TestSecurity_UnauthorizedShareCreation(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
 	// Create two users
 	user1 := createSecurityTestUser(t, app)
 
-	collection := app.FindCollectionByNameOrId("users")
+	collection, err := app.FindCollectionByNameOrId("users")
+	require.NoError(t, err)
 	user2 := core.NewRecord(collection)
 	user2.Set("email", "security3@example.com")
 	user2.Set("username", "securityuser3")
@@ -235,7 +398,7 @@ func TestSecurity_UnauthorizedShareCreation(t *testing.T) {
 	file := createSecurityTestFile(t, app, user1.Id)
 
 	// User2 tries to create a share for user1's file
-	_, err := service.CreateShare(services.CreateShareParams{
+	_, err = service.CreateShare(services.CreateShareParams{
 		UserID:         user2.Id,
 		ResourceType:   "file",
 		ResourceID:     file.Id,
@@ -250,7 +413,7 @@ func TestSecurity_UnauthorizedShareCreation(t *testing.T) {
 func TestSecurity_PermissionEnforcement(t *testing.T) {
 	app := setupSecurityTest(t)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -327,7 +490,8 @@ func TestSecurity_PermissionEnforcement(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Get or create share record to test permission methods
-			collection := app.FindCollectionByNameOrId("shares")
+			collection, err := app.FindCollectionByNameOrId("shares")
+			require.NoError(t, err)
 			share := core.NewRecord(collection)
 			share.Set("user", user.Id)
 			share.Set("resource_type", "file")
@@ -403,7 +567,7 @@ func TestSecurity_PasswordHashingStrength(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -456,7 +620,7 @@ func TestSecurity_ShareAccessWithoutAuthentication(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -484,7 +648,7 @@ func TestSecurity_TokenUniqueness(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -520,7 +684,7 @@ func TestSecurity_AccessCountIncrement(t *testing.T) {
 	app := setupSecurityTest(t)
 	service := services.NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
