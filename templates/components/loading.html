@@ -1,0 +1,24 @@
+<!-- Loading Spinner Component -->
+<div id="{{if .ID}}{{.ID}}{{else}}loading{{end}}"
+     class="{{if .Overlay}}fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50{{else}}flex justify-center items-center p-4{{end}} htmx-indicator">
+    <div class="flex flex-col items-center">
+        <!-- Spinner -->
+        <svg class="animate-spin h-{{if .Size}}{{.Size}}{{else}}8{{end}} w-{{if .Size}}{{.Size}}{{else}}8{{end}} text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+
+        <!-- Loading Text -->
+        {{if .Text}}
+        <p class="mt-2 text-sm text-gray-700">{{.Text}}</p>
+        {{end}}
+    </div>
+</div>
+
+<!-- Inline Loading (for buttons, etc.) -->
+{{define "loading-inline"}}
+<svg class="animate-spin h-4 w-4 text-white inline-block htmx-indicator" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+</svg>
+{{end}}

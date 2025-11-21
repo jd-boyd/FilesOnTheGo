@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jd-boyd/filesonthego/config"
+	"github.com/jd-boyd/filesonthego/handlers"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
@@ -25,7 +26,7 @@ func main() {
 	logger := initLogger(cfg)
 	logger.Info().Msg("Starting FilesOnTheGo application")
 
-	// Create PocketBase instance with custom data directory
+	// Create PocketBase instance with data directory
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		DefaultDataDir: cfg.DBPath,
 	})
@@ -40,8 +41,17 @@ func main() {
 		Bool("public_registration", cfg.PublicRegistration).
 		Msg("Configuration loaded")
 
-	// Set up health check endpoint
-	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+	// Initialize template renderer
+	templateRenderer := handlers.NewTemplateRenderer(".")
+	if err := templateRenderer.LoadTemplates(); err != nil {
+		logger.Fatal().Err(err).Msg("Failed to load templates")
+	}
+	logger.Info().Msg("Templates loaded successfully")
+
+	// Set up health check endpoint and routes
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		e := se
+		// Health check endpoint
 		e.Router.GET("/api/health", func(c *core.RequestEvent) error {
 			return c.JSON(200, map[string]interface{}{
 				"status":      "ok",
@@ -49,6 +59,33 @@ func main() {
 				"version":     "0.1.0",
 			})
 		})
+
+		// Serve static files - using the built-in static file handler
+		// PocketBase's static file serving will be configured separately
+
+		// Initialize auth handler
+		authHandler := handlers.NewAuthHandler(app, templateRenderer, logger)
+
+		// Authentication routes
+		e.Router.GET("/login", authHandler.ShowLoginPage)
+		e.Router.GET("/register", authHandler.ShowRegisterPage)
+		e.Router.POST("/api/auth/login", authHandler.HandleLogin)
+		e.Router.POST("/api/auth/register", authHandler.HandleRegister)
+		e.Router.POST("/logout", authHandler.HandleLogout)
+
+		// Dashboard route (auth will be checked in handler)
+		e.Router.GET("/dashboard", authHandler.ShowDashboard)
+
+		// Root redirect to dashboard or login
+		e.Router.GET("/", func(c *core.RequestEvent) error {
+			// Check if user is authenticated
+			if c.Get("authRecord") != nil {
+				return c.Redirect(302, "/dashboard")
+			}
+			return c.Redirect(302, "/login")
+		})
+
+		logger.Info().Msg("Routes configured successfully")
 		return nil
 	})
 

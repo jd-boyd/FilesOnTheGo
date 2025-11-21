@@ -1,0 +1,31 @@
+{{template "base.html" .}}
+
+{{define "header"}}
+{{template "components/header.html" .}}
+{{end}}
+
+{{define "content"}}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Breadcrumb -->
+    {{if .Breadcrumb}}
+    <div class="mb-6">
+        {{template "components/breadcrumb.html" .}}
+    </div>
+    {{end}}
+
+    <!-- Action Bar -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            {{block "page-header" .}}{{end}}
+        </div>
+        <div class="flex space-x-3">
+            {{block "page-actions" .}}{{end}}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="bg-white rounded-lg shadow">
+        {{block "app-content" .}}{{end}}
+    </div>
+</div>
+{{end}}

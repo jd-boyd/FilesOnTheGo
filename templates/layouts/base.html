@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FilesOnTheGo - Self-hosted file storage and sharing service">
+    <title>{{block "title" .}}FilesOnTheGo{{end}}</title>
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="/static/css/output.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10" defer></script>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/app.js" defer></script>
+
+    {{block "head" .}}{{end}}
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Header -->
+    {{block "header" .}}
+    <header class="bg-white shadow-sm">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center space-x-2">
+                        <svg class="h-8 w-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        <span class="text-xl font-bold text-gray-900">FilesOnTheGo</span>
+                    </a>
+                </div>
+                {{block "nav" .}}{{end}}
+            </div>
+        </nav>
+    </header>
+    {{end}}
+
+    <!-- Main Content -->
+    <main class="flex-grow">
+        {{block "content" .}}{{end}}
+    </main>
+
+    <!-- Footer -->
+    {{block "footer" .}}
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <p class="text-center text-sm text-gray-500">
+                &copy; 2025 FilesOnTheGo. All rights reserved.
+            </p>
+        </div>
+    </footer>
+    {{end}}
+</body>
+</html>
