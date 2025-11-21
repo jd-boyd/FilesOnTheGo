@@ -40,6 +40,19 @@ type Config struct {
 
 	// User Quota Configuration
 	DefaultUserQuota int64 // in bytes, 0 means unlimited
+
+	// TLS Configuration
+	TLSEnabled  bool   // Enable HTTPS
+	TLSPort     string // HTTPS port (default: 443)
+	TLSCertFile string // Path to TLS certificate file
+	TLSKeyFile  string // Path to TLS private key file
+	TLSRedirect bool   // Redirect HTTP to HTTPS
+
+	// Let's Encrypt Configuration
+	LetsEncryptEnabled bool   // Enable automatic Let's Encrypt certificates
+	LetsEncryptDomain  string // Domain for Let's Encrypt certificate
+	LetsEncryptEmail   string // Email for Let's Encrypt account notifications
+	LetsEncryptCache   string // Cache directory for ACME certificates
 }
 
 // Load reads configuration from environment variables and returns a Config struct
@@ -74,6 +87,19 @@ func Load() (*Config, error) {
 
 		// User Quota Configuration
 		DefaultUserQuota: getEnvInt64("DEFAULT_USER_QUOTA", 10*1024*1024*1024), // Default: 10GB
+
+		// TLS Configuration
+		TLSEnabled:  getEnvBool("TLS_ENABLED", false),
+		TLSPort:     getEnv("TLS_PORT", "443"),
+		TLSCertFile: getEnv("TLS_CERT_FILE", ""),
+		TLSKeyFile:  getEnv("TLS_KEY_FILE", ""),
+		TLSRedirect: getEnvBool("TLS_REDIRECT", true),
+
+		// Let's Encrypt Configuration
+		LetsEncryptEnabled: getEnvBool("LETSENCRYPT_ENABLED", false),
+		LetsEncryptDomain:  getEnv("LETSENCRYPT_DOMAIN", ""),
+		LetsEncryptEmail:   getEnv("LETSENCRYPT_EMAIL", ""),
+		LetsEncryptCache:   getEnv("LETSENCRYPT_CACHE", "./certs"),
 	}
 
 	// Validate the configuration
@@ -122,6 +148,40 @@ func (c *Config) Validate() error {
 		errs = append(errs, errors.New("APP_URL is required"))
 	}
 
+	// Validate TLS configuration
+	if c.TLSEnabled {
+		// If TLS is enabled with certificate files, both must be provided
+		if !c.LetsEncryptEnabled {
+			if c.TLSCertFile == "" {
+				errs = append(errs, errors.New("TLS_CERT_FILE is required when TLS is enabled without Let's Encrypt"))
+			}
+			if c.TLSKeyFile == "" {
+				errs = append(errs, errors.New("TLS_KEY_FILE is required when TLS is enabled without Let's Encrypt"))
+			}
+		}
+
+		// Validate TLS port
+		if c.TLSPort == "" {
+			errs = append(errs, errors.New("TLS_PORT cannot be empty when TLS is enabled"))
+		}
+	}
+
+	// Validate Let's Encrypt configuration
+	if c.LetsEncryptEnabled {
+		if !c.TLSEnabled {
+			errs = append(errs, errors.New("TLS_ENABLED must be true when using Let's Encrypt"))
+		}
+		if c.LetsEncryptDomain == "" {
+			errs = append(errs, errors.New("LETSENCRYPT_DOMAIN is required when Let's Encrypt is enabled"))
+		}
+		if c.LetsEncryptEmail == "" {
+			errs = append(errs, errors.New("LETSENCRYPT_EMAIL is required when Let's Encrypt is enabled"))
+		}
+		if c.LetsEncryptCache == "" {
+			errs = append(errs, errors.New("LETSENCRYPT_CACHE is required when Let's Encrypt is enabled"))
+		}
+	}
+
 	if len(errs) > 0 {
 		return fmt.Errorf("validation errors: %v", errs)
 	}
@@ -137,6 +197,16 @@ func (c *Config) IsDevelopment() bool {
 // IsProduction returns true if the app is running in production mode
 func (c *Config) IsProduction() bool {
 	return c.AppEnvironment == "production"
+}
+
+// UsesLetsEncrypt returns true if Let's Encrypt is configured for automatic certificates
+func (c *Config) UsesLetsEncrypt() bool {
+	return c.TLSEnabled && c.LetsEncryptEnabled
+}
+
+// UsesCertificateFiles returns true if TLS is enabled with manual certificate files
+func (c *Config) UsesCertificateFiles() bool {
+	return c.TLSEnabled && !c.LetsEncryptEnabled && c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
 // Helper functions for reading environment variables

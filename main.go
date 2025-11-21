@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 	"github.com/jd-boyd/filesonthego/config"
 	"github.com/jd-boyd/filesonthego/handlers"
 	_ "github.com/jd-boyd/filesonthego/migrations" // Import migrations for side effects
+	"github.com/jd-boyd/filesonthego/services"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
@@ -42,6 +44,8 @@ func main() {
 		Str("s3_region", cfg.S3Region).
 		Int64("max_upload_size", cfg.MaxUploadSize).
 		Bool("public_registration", cfg.PublicRegistration).
+		Bool("tls_enabled", cfg.TLSEnabled).
+		Bool("letsencrypt_enabled", cfg.LetsEncryptEnabled).
 		Msg("Configuration loaded")
 
 	// Initialize template renderer
@@ -96,6 +100,7 @@ func main() {
 	app.OnServe().BindFunc(func(_ *core.ServeEvent) error {
 		logger.Info().
 			Str("address", ":"+cfg.AppPort).
+			Bool("tls_enabled", cfg.TLSEnabled).
 			Msg("PocketBase HTTP server starting")
 		return nil
 	})
@@ -107,6 +112,64 @@ func main() {
 	// Handle OS signals for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Initialize TLS service if TLS is enabled
+	var tlsService *services.TLSService
+	var httpRedirectServer *http.Server
+	var httpsServer *http.Server
+
+	if cfg.TLSEnabled {
+		tlsService = services.NewTLSService(cfg)
+
+		// Get TLS configuration
+		tlsConfig, err := tlsService.GetTLSConfig()
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to initialize TLS configuration")
+		}
+
+		logger.Info().
+			Str("tls_port", cfg.TLSPort).
+			Bool("letsencrypt", cfg.LetsEncryptEnabled).
+			Msg("TLS initialized successfully")
+
+		// Set up HTTPS server using PocketBase's router
+		// We need to start PocketBase first to get the router, then attach it to HTTPS
+		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+			httpsServer = &http.Server{
+				Addr:      ":" + cfg.TLSPort,
+				Handler:   e.Router,
+				TLSConfig: tlsConfig,
+			}
+
+			go func() {
+				logger.Info().
+					Str("address", ":"+cfg.TLSPort).
+					Msg("Starting HTTPS server")
+				if err := httpsServer.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+					logger.Error().Err(err).Msg("HTTPS server error")
+				}
+			}()
+
+			return nil
+		})
+
+		// Start HTTP redirect server if TLS redirect is enabled
+		if cfg.TLSRedirect {
+			httpRedirectServer = &http.Server{
+				Addr:    ":" + cfg.AppPort,
+				Handler: tlsService.GetRedirectAndChallengeHandler(),
+			}
+
+			go func() {
+				logger.Info().
+					Str("address", ":"+cfg.AppPort).
+					Msg("Starting HTTP redirect server")
+				if err := httpRedirectServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					logger.Error().Err(err).Msg("HTTP redirect server error")
+				}
+			}()
+		}
+	}
 
 	// Start PocketBase in a goroutine
 	errChan := make(chan error, 1)
@@ -129,6 +192,22 @@ func main() {
 
 		// Perform graceful shutdown operations here
 		logger.Info().Msg("Graceful shutdown initiated")
+
+		// Shutdown HTTPS server if running
+		if httpsServer != nil {
+			logger.Info().Msg("Shutting down HTTPS server")
+			if err := httpsServer.Shutdown(shutdownCtx); err != nil {
+				logger.Error().Err(err).Msg("Error shutting down HTTPS server")
+			}
+		}
+
+		// Shutdown HTTP redirect server if running
+		if httpRedirectServer != nil {
+			logger.Info().Msg("Shutting down HTTP redirect server")
+			if err := httpRedirectServer.Shutdown(shutdownCtx); err != nil {
+				logger.Error().Err(err).Msg("Error shutting down HTTP redirect server")
+			}
+		}
 
 		// Wait for shutdown context to complete or timeout
 		<-shutdownCtx.Done()
