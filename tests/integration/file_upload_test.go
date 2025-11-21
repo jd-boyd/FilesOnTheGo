@@ -2,20 +2,15 @@ package integration
 
 import (
 	"bytes"
-	"io"
 	"mime/multipart"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/jd-boyd/filesonthego/config"
-	"github.com/jd-boyd/filesonthego/handlers"
 	"github.com/jd-boyd/filesonthego/services"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/stretchr/testify/assert"
 )
 
 // TestApp represents a test application instance
