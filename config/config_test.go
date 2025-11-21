@@ -308,14 +308,14 @@ func TestLoad_DefaultValues(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, "us-east-1", cfg.S3Region) // Default
-	assert.Equal(t, true, cfg.S3UseSSL) // Default
-	assert.Equal(t, "8090", cfg.AppPort) // Default
-	assert.Equal(t, "development", cfg.AppEnvironment) // Default
-	assert.Equal(t, "./pb_data", cfg.DBPath) // Default
-	assert.Equal(t, int64(100*1024*1024), cfg.MaxUploadSize) // Default 100MB
-	assert.Equal(t, true, cfg.PublicRegistration) // Default
-	assert.Equal(t, false, cfg.EmailVerification) // Default
+	assert.Equal(t, "us-east-1", cfg.S3Region)                      // Default
+	assert.Equal(t, true, cfg.S3UseSSL)                             // Default
+	assert.Equal(t, "8090", cfg.AppPort)                            // Default
+	assert.Equal(t, "development", cfg.AppEnvironment)              // Default
+	assert.Equal(t, "./pb_data", cfg.DBPath)                        // Default
+	assert.Equal(t, int64(100*1024*1024), cfg.MaxUploadSize)        // Default 100MB
+	assert.Equal(t, true, cfg.PublicRegistration)                   // Default
+	assert.Equal(t, false, cfg.EmailVerification)                   // Default
 	assert.Equal(t, int64(10*1024*1024*1024), cfg.DefaultUserQuota) // Default 10GB
 }
 
