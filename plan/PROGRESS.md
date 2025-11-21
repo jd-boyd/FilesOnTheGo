@@ -4,7 +4,7 @@ Last Updated: 2025-11-21
 
 ## Overall Status
 - **Current Phase**: Group 2 - Core Services
-- **Steps Completed**: 3/16 (19%)
+- **Steps Completed**: 4/16 (25%)
 - **Steps In Progress**: 0/16 (0%)
 - **Estimated Completion**: TBD
 
@@ -23,8 +23,9 @@ Last Updated: 2025-11-21
   - Status: Not started
   - Dependencies: Step 01 ✅
 
-- [ ] **Step 04**: Permission service implementation ⏳ PENDING
-  - Status: Not started
+- [x] **Step 04**: Permission service implementation ✅ COMPLETED
+  - Completed: 2025-11-21
+  - Status: All methods implemented with security features (rate limiting, audit logging, bcrypt password hashing)
   - Dependencies: Step 01 ✅
 
 - [x] **Step 05**: Basic HTMX UI layout ✅ COMPLETED
@@ -86,6 +87,19 @@ Last Updated: 2025-11-21
   - Custom error types and comprehensive structured logging
   - 76.6% test coverage with all tests passing
   - Interface-based design for mockable testing
+- **Step 04** (2025-11-21): Implemented comprehensive permission validation service with:
+  - PermissionService interface with all file, directory, and share methods
+  - File permission checks (read, upload, delete, move) with ownership validation
+  - Directory permission checks (read, create, delete)
+  - Share token validation with expiration and password protection (bcrypt)
+  - Permission matrix enforcement (read, read_upload, upload_only)
+  - User quota management and size validation
+  - Rate limiting (10 attempts/minute) with automatic cleanup
+  - Comprehensive audit logging for all permission denials
+  - Permission middleware (file ownership, directory access, share validation, upload access, quota checks)
+  - Compatible with PocketBase v0.33.0 API
+  - Secure password comparison using bcrypt (constant-time)
+  - Recursive directory hierarchy checks with cycle detection
 - **Step 05** (2025-11-21): Implemented basic HTMX UI layout with:
   - Tailwind CSS configuration and build process
   - Base layout templates (base, auth, app)
