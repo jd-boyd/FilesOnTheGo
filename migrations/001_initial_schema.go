@@ -1,3 +1,5 @@
+// Package migrations provides database migration scripts for FilesOnTheGo.
+// It creates the necessary collections and indexes for the application.
 package migrations
 
 import (

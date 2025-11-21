@@ -1,3 +1,5 @@
+// Package models provides data structures and business logic for FilesOnTheGo.
+// It includes directory management, permissions, and other core domain models.
 package models
 
 import (

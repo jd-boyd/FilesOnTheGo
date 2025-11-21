@@ -739,7 +739,7 @@ func (h *DirectoryHandler) calculateFullPath(parentDirID, name string) string {
 }
 
 // updateChildPaths updates the paths of all child directories and files
-func (h *DirectoryHandler) updateChildPaths(directoryID, oldPath, newPath string) error {
+func (h *DirectoryHandler) updateChildPaths(directoryID, _, newPath string) error {
 	// Update subdirectories
 	subdirs, err := h.app.FindRecordsByFilter(
 		"directories",

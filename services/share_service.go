@@ -139,7 +139,14 @@ func (s *ShareServiceImpl) CreateShare(params CreateShareParams) (*ShareInfo, er
 	shareToken := uuid.New().String()
 
 	// Create share record
-	sharesCollection := s.app.FindCollectionByNameOrId("shares")
+	sharesCollection, err := s.app.FindCollectionByNameOrId("shares")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to find shares collection")
+		return nil, fmt.Errorf("failed to find shares collection: %w", err)
+	}
+	if sharesCollection == nil {
+		return nil, fmt.Errorf("shares collection not found")
+	}
 	record := core.NewRecord(sharesCollection)
 
 	record.Set("user", params.UserID)
@@ -465,7 +472,11 @@ func (s *ShareServiceImpl) LogShareAccess(shareID, action, fileName, ipAddress, 
 	}
 
 	// Create access log entry
-	collection := s.app.FindCollectionByNameOrId("share_access_logs")
+	collection, err := s.app.FindCollectionByNameOrId("share_access_logs")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to find share_access_logs collection")
+		return fmt.Errorf("failed to find share_access_logs collection: %w", err)
+	}
 	if collection == nil {
 		// Collection doesn't exist yet, skip logging
 		log.Warn().Msg("share_access_logs collection not found, skipping access logging")

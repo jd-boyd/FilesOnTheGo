@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Test files and coverage
+*_test.go
+tests/
+coverage.out
+coverage.html
+
+# Build artifacts
+build/
+dist/
+*.exe
+filesonthego
+filesonthego_*
+
+# Data directories (these will be mounted as volumes)
+pb_data/
+pb_public/
+pb_hooks/
+
+# Development files
+run_dev.sh
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/

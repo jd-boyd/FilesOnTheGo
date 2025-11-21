@@ -1,3 +1,5 @@
+// Package main implements the FilesOnTheGo application entry point.
+// FilesOnTheGo is a self-hosted file storage and sharing service built with PocketBase.
 package main
 
 import (
@@ -91,7 +93,7 @@ func main() {
 	})
 
 	// Log when the server is starting
-	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+	app.OnServe().BindFunc(func(_ *core.ServeEvent) error {
 		logger.Info().
 			Str("address", ":"+cfg.AppPort).
 			Msg("PocketBase HTTP server starting")

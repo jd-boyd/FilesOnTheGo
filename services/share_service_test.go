@@ -38,7 +38,7 @@ func setupTestApp(t *testing.T) *pocketbase.PocketBase {
 
 // createTestUser creates a test user
 func createTestUser(t *testing.T, app *pocketbase.PocketBase) string {
-	collection := app.FindCollectionByNameOrId("users")
+	collection, err := app.FindCollectionByNameOrId("users")
 	if collection == nil {
 		t.Skip("users collection not found")
 	}
@@ -56,7 +56,7 @@ func createTestUser(t *testing.T, app *pocketbase.PocketBase) string {
 
 // createTestFile creates a test file for testing
 func createTestFile(t *testing.T, app *pocketbase.PocketBase, userID string) string {
-	collection := app.FindCollectionByNameOrId("files")
+	collection, err := app.FindCollectionByNameOrId("files")
 	if collection == nil {
 		t.Skip("files collection not found")
 	}
@@ -76,7 +76,7 @@ func createTestFile(t *testing.T, app *pocketbase.PocketBase, userID string) str
 
 // createTestDirectory creates a test directory for testing
 func createTestDirectory(t *testing.T, app *pocketbase.PocketBase, userID string) string {
-	collection := app.FindCollectionByNameOrId("directories")
+	collection, err := app.FindCollectionByNameOrId("directories")
 	if collection == nil {
 		t.Skip("directories collection not found")
 	}
@@ -105,7 +105,7 @@ func TestShareService_CreateShare_File(t *testing.T) {
 	service := NewShareService(app)
 
 	// Skip if collections don't exist
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -136,7 +136,7 @@ func TestShareService_CreateShare_Directory(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -163,7 +163,7 @@ func TestShareService_CreateShare_WithPassword(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -189,7 +189,7 @@ func TestShareService_CreateShare_WithExpiration(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -217,7 +217,7 @@ func TestShareService_CreateShare_GeneratesUniqueTokens(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -305,7 +305,7 @@ func TestShareService_CreateShare_ExpiredExpiration(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -352,7 +352,7 @@ func TestShareService_CreateShare_NotOwner(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -360,7 +360,7 @@ func TestShareService_CreateShare_NotOwner(t *testing.T) {
 	user1ID := createTestUser(t, app)
 
 	// Create second user
-	collection := app.FindCollectionByNameOrId("users")
+	collection, err := app.FindCollectionByNameOrId("users")
 	user2 := core.NewRecord(collection)
 	user2.Set("email", "test2@example.com")
 	user2.Set("username", "testuser2")
@@ -390,7 +390,7 @@ func TestShareService_GetShareByToken(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -443,7 +443,7 @@ func TestShareService_GetShareByID(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -473,7 +473,7 @@ func TestShareService_ValidateShareAccess_Valid(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -504,7 +504,7 @@ func TestShareService_ValidateShareAccess_WithCorrectPassword(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -534,7 +534,7 @@ func TestShareService_ValidateShareAccess_WithWrongPassword(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -564,7 +564,7 @@ func TestShareService_ValidateShareAccess_MissingPassword(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -594,7 +594,7 @@ func TestShareService_ValidateShareAccess_Expired(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -640,7 +640,7 @@ func TestShareService_RevokeShare(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -670,7 +670,7 @@ func TestShareService_RevokeShare_NotOwner(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -678,7 +678,7 @@ func TestShareService_RevokeShare_NotOwner(t *testing.T) {
 	fileID := createTestFile(t, app, user1ID)
 
 	// Create second user
-	collection := app.FindCollectionByNameOrId("users")
+	collection, err := app.FindCollectionByNameOrId("users")
 	user2 := core.NewRecord(collection)
 	user2.Set("email", "test2@example.com")
 	user2.Set("username", "testuser2")
@@ -707,7 +707,7 @@ func TestShareService_ListUserShares(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -715,7 +715,7 @@ func TestShareService_ListUserShares(t *testing.T) {
 	file1ID := createTestFile(t, app, userID)
 
 	// Create file 2
-	collection := app.FindCollectionByNameOrId("files")
+	collection, err := app.FindCollectionByNameOrId("files")
 	file2 := core.NewRecord(collection)
 	file2.Set("user", userID)
 	file2.Set("name", "test2.txt")
@@ -751,7 +751,7 @@ func TestShareService_ListUserShares_FilterByType(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -791,7 +791,7 @@ func TestShareService_UpdateShareExpiration(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -823,7 +823,7 @@ func TestShareService_UpdateShareExpiration_RemoveExpiration(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -857,7 +857,7 @@ func TestShareService_IncrementAccessCount(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -894,7 +894,7 @@ func TestShareService_LogShareAccess(t *testing.T) {
 	app := setupTestApp(t)
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -929,12 +929,12 @@ func BenchmarkShareService_CreateShare(b *testing.B) {
 	service := NewShareService(app)
 
 	// Skip if collections don't exist
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		b.Skip("shares collection not found")
 	}
 
 	// Create test user and file
-	userCollection := app.FindCollectionByNameOrId("users")
+	userCollection, err := app.FindCollectionByNameOrId("users")
 	if userCollection == nil {
 		b.Skip("users collection not found")
 	}
@@ -945,7 +945,7 @@ func BenchmarkShareService_CreateShare(b *testing.B) {
 	app.Save(userRecord)
 	userID := userRecord.Id
 
-	fileCollection := app.FindCollectionByNameOrId("files")
+	fileCollection, err := app.FindCollectionByNameOrId("files")
 	if fileCollection == nil {
 		b.Skip("files collection not found")
 	}
@@ -981,12 +981,12 @@ func BenchmarkShareService_ValidateShareAccess(b *testing.B) {
 
 	service := NewShareService(app)
 
-	if app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := app.FindCollectionByNameOrId("shares"); err != nil {
 		b.Skip("shares collection not found")
 	}
 
 	// Create test data
-	userCollection := app.FindCollectionByNameOrId("users")
+	userCollection, err := app.FindCollectionByNameOrId("users")
 	if userCollection == nil {
 		b.Skip("users collection not found")
 	}
@@ -996,7 +996,7 @@ func BenchmarkShareService_ValidateShareAccess(b *testing.B) {
 	userRecord.SetPassword("password")
 	app.Save(userRecord)
 
-	fileCollection := app.FindCollectionByNameOrId("files")
+	fileCollection, err := app.FindCollectionByNameOrId("files")
 	if fileCollection == nil {
 		b.Skip("files collection not found")
 	}

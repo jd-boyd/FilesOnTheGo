@@ -384,7 +384,7 @@ func TestSecurity_TokenEnumerationPrevention(t *testing.T) {
 	}
 
 	for _, token := range invalidTokens {
-		t.Run("token_"+token[:min(len(token), 20)], func(t *testing.T) {
+		t.Run("token_"+token[:minInt(len(token), 20)], func(t *testing.T) {
 			accessInfo, err := service.ValidateShareAccess(token, "")
 
 			// Should not error, but should return invalid
@@ -550,7 +550,7 @@ func TestSecurity_AccessCountIncrement(t *testing.T) {
 	}
 }
 
-func min(a, b int) int {
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

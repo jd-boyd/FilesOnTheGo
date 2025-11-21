@@ -49,13 +49,15 @@ type ValidateSharePasswordRequest struct {
 // CreateShare handles POST /api/shares
 func (h *ShareHandler) CreateShare(c *core.RequestEvent) error {
 	// Get authenticated user ID
-	authRecord := c.Auth()
+	authRecord := c.Get("authRecord")
 	if authRecord == nil {
 		h.logger.Warn().Msg("Unauthenticated share creation attempt")
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Authentication required",
 		})
 	}
+
+	user := authRecord.(*core.Record)
 
 	// Parse request body
 	var req CreateShareRequest
@@ -68,7 +70,7 @@ func (h *ShareHandler) CreateShare(c *core.RequestEvent) error {
 
 	// Create share
 	params := services.CreateShareParams{
-		UserID:         authRecord.Id,
+		UserID:         user.Id,
 		ResourceType:   req.ResourceType,
 		ResourceID:     req.ResourceID,
 		PermissionType: req.PermissionType,
@@ -78,7 +80,7 @@ func (h *ShareHandler) CreateShare(c *core.RequestEvent) error {
 
 	share, err := h.shareService.CreateShare(params)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", authRecord.Id).Msg("Failed to create share")
+		h.logger.Error().Err(err).Str("user_id", user.Id).Msg("Failed to create share")
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
@@ -86,7 +88,7 @@ func (h *ShareHandler) CreateShare(c *core.RequestEvent) error {
 
 	h.logger.Info().
 		Str("share_id", share.ID).
-		Str("user_id", authRecord.Id).
+		Str("user_id", user.Id).
 		Str("resource_type", req.ResourceType).
 		Msg("Share created")
 
@@ -103,20 +105,22 @@ func (h *ShareHandler) CreateShare(c *core.RequestEvent) error {
 // ListShares handles GET /api/shares
 func (h *ShareHandler) ListShares(c *core.RequestEvent) error {
 	// Get authenticated user ID
-	authRecord := c.Auth()
+	authRecord := c.Get("authRecord")
 	if authRecord == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Authentication required",
 		})
 	}
 
+	user := authRecord.(*core.Record)
+
 	// Get optional resource type filter
 	resourceType := c.Request.URL.Query().Get("resource_type")
 
 	// List shares
-	shares, err := h.shareService.ListUserShares(authRecord.Id, resourceType)
+	shares, err := h.shareService.ListUserShares(user.Id, resourceType)
 	if err != nil {
-		h.logger.Error().Err(err).Str("user_id", authRecord.Id).Msg("Failed to list shares")
+		h.logger.Error().Err(err).Str("user_id", user.Id).Msg("Failed to list shares")
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to list shares",
 		})
@@ -130,12 +134,14 @@ func (h *ShareHandler) ListShares(c *core.RequestEvent) error {
 // GetShare handles GET /api/shares/{share_id}
 func (h *ShareHandler) GetShare(c *core.RequestEvent) error {
 	// Get authenticated user ID
-	authRecord := c.Auth()
+	authRecord := c.Get("authRecord")
 	if authRecord == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Authentication required",
 		})
 	}
+
+	user := authRecord.(*core.Record)
 
 	shareID := c.Request.PathValue("share_id")
 	if shareID == "" {
@@ -153,9 +159,9 @@ func (h *ShareHandler) GetShare(c *core.RequestEvent) error {
 	}
 
 	// Verify user owns the share
-	if share.UserID != authRecord.Id {
+	if share.UserID != user.Id {
 		h.logger.Warn().
-			Str("user_id", authRecord.Id).
+			Str("user_id", user.Id).
 			Str("share_id", shareID).
 			Msg("Unauthorized share access attempt")
 		return c.JSON(http.StatusForbidden, map[string]string{
@@ -176,12 +182,14 @@ func (h *ShareHandler) GetShare(c *core.RequestEvent) error {
 // UpdateShare handles PATCH /api/shares/{share_id}
 func (h *ShareHandler) UpdateShare(c *core.RequestEvent) error {
 	// Get authenticated user ID
-	authRecord := c.Auth()
+	authRecord := c.Get("authRecord")
 	if authRecord == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Authentication required",
 		})
 	}
+
+	user := authRecord.(*core.Record)
 
 	shareID := c.Request.PathValue("share_id")
 	if shareID == "" {
@@ -199,7 +207,7 @@ func (h *ShareHandler) UpdateShare(c *core.RequestEvent) error {
 	}
 
 	// Update expiration
-	err := h.shareService.UpdateShareExpiration(shareID, authRecord.Id, req.ExpiresAt)
+	err := h.shareService.UpdateShareExpiration(shareID, user.Id, req.ExpiresAt)
 	if err != nil {
 		h.logger.Error().Err(err).Str("share_id", shareID).Msg("Failed to update share")
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -223,12 +231,14 @@ func (h *ShareHandler) UpdateShare(c *core.RequestEvent) error {
 // RevokeShare handles DELETE /api/shares/{share_id}
 func (h *ShareHandler) RevokeShare(c *core.RequestEvent) error {
 	// Get authenticated user ID
-	authRecord := c.Auth()
+	authRecord := c.Get("authRecord")
 	if authRecord == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Authentication required",
 		})
 	}
+
+	user := authRecord.(*core.Record)
 
 	shareID := c.Request.PathValue("share_id")
 	if shareID == "" {
@@ -238,7 +248,7 @@ func (h *ShareHandler) RevokeShare(c *core.RequestEvent) error {
 	}
 
 	// Revoke share
-	err := h.shareService.RevokeShare(shareID, authRecord.Id)
+	err := h.shareService.RevokeShare(shareID, user.Id)
 	if err != nil {
 		h.logger.Error().Err(err).Str("share_id", shareID).Msg("Failed to revoke share")
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -256,12 +266,14 @@ func (h *ShareHandler) RevokeShare(c *core.RequestEvent) error {
 // GetShareLogs handles GET /api/shares/{share_id}/logs
 func (h *ShareHandler) GetShareLogs(c *core.RequestEvent) error {
 	// Get authenticated user ID
-	authRecord := c.Auth()
+	authRecord := c.Get("authRecord")
 	if authRecord == nil {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"error": "Authentication required",
 		})
 	}
+
+	user := authRecord.(*core.Record)
 
 	shareID := c.Request.PathValue("share_id")
 	if shareID == "" {
@@ -271,7 +283,7 @@ func (h *ShareHandler) GetShareLogs(c *core.RequestEvent) error {
 	}
 
 	// Get access logs
-	logs, err := h.shareService.GetShareAccessLogs(shareID, authRecord.Id)
+	logs, err := h.shareService.GetShareAccessLogs(shareID, user.Id)
 	if err != nil {
 		h.logger.Error().Err(err).Str("share_id", shareID).Msg("Failed to get share logs")
 		return c.JSON(http.StatusBadRequest, map[string]string{

@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware for authentication, authorization,
+// and request processing for the FilesOnTheGo application.
 package middleware
 
 import (

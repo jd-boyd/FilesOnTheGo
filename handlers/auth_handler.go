@@ -1,3 +1,5 @@
+// Package handlers provides HTTP request handlers for FilesOnTheGo.
+// It includes handlers for file operations, authentication, and API endpoints.
 package handlers
 
 import (
