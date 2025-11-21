@@ -235,6 +235,8 @@ Use this exact format when committing your work.
 
 ### Success Criteria
 
+**IMPORTANT: When you complete this step, update plan/PROGRESS.md to mark this step as completed and update the overall progress statistics.**
+
 - [ ] File upload endpoint works
 - [ ] Files uploaded to S3 successfully
 - [ ] Database records created correctly

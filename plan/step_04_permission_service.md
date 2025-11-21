@@ -198,6 +198,8 @@ Use this exact format when committing your work.
 
 ### Success Criteria
 
+**IMPORTANT: When you complete this step, update plan/PROGRESS.md to mark this step as completed and update the overall progress statistics.**
+
 - [ ] All permission methods implemented
 - [ ] Permission matrix correctly enforced
 - [ ] Share token validation works

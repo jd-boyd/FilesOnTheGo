@@ -194,6 +194,8 @@ Use this exact format when committing your work.
 
 ### Success Criteria
 
+**IMPORTANT: When you complete this step, update plan/PROGRESS.md to mark this step as completed and update the overall progress statistics.**
+
 - [ ] Tailwind CSS properly configured and builds
 - [ ] Base layouts created and render correctly
 - [ ] All components created and reusable
