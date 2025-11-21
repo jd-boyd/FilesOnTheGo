@@ -63,12 +63,23 @@ type S3Service interface {
 	GetFileMetadata(key string) (*FileMetadata, error)
 }
 
+// S3Client defines the interface for S3 client operations
+type S3Client interface {
+	HeadBucket(ctx context.Context, params *s3.HeadBucketInput, optFns ...func(*s3.Options)) (*s3.HeadBucketOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	DeleteObjects(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+}
+
 // S3ServiceImpl implements the S3Service interface
 type S3ServiceImpl struct {
-	client   *s3.Client
-	bucket   string
-	region   string
-	endpoint string
+	client       S3Client      // Interface for mockable operations
+	concreteClient *s3.Client  // Concrete client for advanced operations (presigning, upload manager)
+	bucket       string
+	region       string
+	endpoint     string
 }
 
 // NewS3Service creates a new S3 service instance and validates the connection
@@ -120,10 +131,11 @@ func NewS3Service(cfg *config.Config) (*S3ServiceImpl, error) {
 	})
 
 	service := &S3ServiceImpl{
-		client:   s3Client,
-		bucket:   cfg.S3Bucket,
-		region:   cfg.S3Region,
-		endpoint: cfg.S3Endpoint,
+		client:         s3Client,
+		concreteClient: s3Client,
+		bucket:         cfg.S3Bucket,
+		region:         cfg.S3Region,
+		endpoint:       cfg.S3Endpoint,
 	}
 
 	// Test connection by checking if bucket exists
@@ -212,7 +224,7 @@ func (s *S3ServiceImpl) UploadStream(key string, reader io.Reader) error {
 		Msg("Starting streaming upload to S3")
 
 	// Use S3 Upload Manager for efficient multipart uploads
-	uploader := manager.NewUploader(s.client, func(u *manager.Uploader) {
+	uploader := manager.NewUploader(s.concreteClient, func(u *manager.Uploader) {
 		// Set part size to 10MB for multipart uploads
 		u.PartSize = 10 * 1024 * 1024
 	})
@@ -403,7 +415,7 @@ func (s *S3ServiceImpl) GetPresignedURL(key string, expirationMinutes int) (stri
 		Msg("Generating presigned URL")
 
 	// Create presign client
-	presignClient := s3.NewPresignClient(s.client)
+	presignClient := s3.NewPresignClient(s.concreteClient)
 
 	// Generate presigned URL for GetObject
 	request, err := presignClient.PresignGetObject(context.Background(), &s3.GetObjectInput{
@@ -533,6 +545,10 @@ func GenerateS3Key(userID, fileID, filename string) string {
 
 // sanitizeFilename removes path separators and dangerous characters from filename
 func sanitizeFilename(filename string) string {
+	// Normalize path separators: replace backslashes with forward slashes
+	// This ensures Windows paths are handled correctly on all platforms
+	filename = strings.ReplaceAll(filename, "\\", "/")
+
 	// Extract just the base filename (removes any path components)
 	filename = filepath.Base(filename)
 
