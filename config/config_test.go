@@ -292,12 +292,15 @@ func TestGetEnv_UsesDefaultWhenUnset(t *testing.T) {
 }
 
 func TestLoad_DefaultValues(t *testing.T) {
-	// Arrange - minimal config
+	// Arrange - clean environment first to avoid test pollution
+	cleanTestEnv(t)
+	defer cleanTestEnv(t)
+
+	// Set minimal required config
 	os.Setenv("S3_ENDPOINT", "http://minio:9000")
 	os.Setenv("S3_BUCKET", "test")
 	os.Setenv("S3_ACCESS_KEY", "key")
 	os.Setenv("S3_SECRET_KEY", "secret")
-	defer cleanTestEnv(t)
 
 	// Act
 	cfg, err := Load()

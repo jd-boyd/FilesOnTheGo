@@ -18,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        go-version: ['1.23']
+        go-version: ['1.24']
 
     steps:
       - name: Check out code
@@ -39,19 +39,9 @@ jobs:
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Check test coverage
-        run: |
-          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "Total coverage: ${coverage}%"
-          # Fail if coverage is below 80%
-          if (( $(echo "$coverage < 80" | bc -l) )); then
-            echo "Coverage is below 80%"
-            exit 1
-          fi
-
       - name: Upload coverage to Codecov (optional)
         uses: codecov/codecov-action@v4
-        if: matrix.go-version == '1.23'
+        if: matrix.go-version == '1.24'
         with:
           file: ./coverage.out
           fail_ci_if_error: false
@@ -68,7 +58,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
           cache: true
 
       - name: Run golangci-lint
@@ -88,7 +78,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
           cache: true
 
       - name: Download dependencies

@@ -25,11 +25,10 @@ func main() {
 	logger := initLogger(cfg)
 	logger.Info().Msg("Starting FilesOnTheGo application")
 
-	// Create PocketBase instance
-	app := pocketbase.New()
-
-	// Configure PocketBase data directory
-	app.DataDir = cfg.DBPath
+	// Create PocketBase instance with custom data directory
+	app := pocketbase.NewWithConfig(pocketbase.Config{
+		DefaultDataDir: cfg.DBPath,
+	})
 
 	// Log configuration (without sensitive data)
 	logger.Info().
@@ -42,8 +41,8 @@ func main() {
 		Msg("Configuration loaded")
 
 	// Set up health check endpoint
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		e.Router.GET("/api/health", func(c core.RequestEvent) error {
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
+		e.Router.GET("/api/health", func(c *core.RequestEvent) error {
 			return c.JSON(200, map[string]interface{}{
 				"status":      "ok",
 				"environment": cfg.AppEnvironment,
@@ -54,7 +53,7 @@ func main() {
 	})
 
 	// Log when the server is starting
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		logger.Info().
 			Str("address", ":"+cfg.AppPort).
 			Msg("PocketBase HTTP server starting")
