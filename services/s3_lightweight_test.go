@@ -2,16 +2,11 @@ package services
 
 import (
 	"bytes"
-	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/xml"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -30,10 +25,8 @@ func createMockS3Server(t *testing.T) (*httptest.Server, map[string][]byte) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			w.WriteHeader(http.StatusForbidden)
-			xml.Write(w, xml.Name{Local: "Error"}, &S3ErrorResponse{
-				Code:    "AccessDenied",
-				Message: "Missing authentication header",
-			})
+			errorXML := `<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Missing authentication header</Message></Error>`
+			w.Write([]byte(errorXML))
 			return
 		}
 
@@ -59,11 +52,8 @@ func createMockS3Server(t *testing.T) (*httptest.Server, map[string][]byte) {
 				w.Write(data)
 			} else {
 				w.WriteHeader(http.StatusNotFound)
-				xml.Write(w, xml.Name{Local: "Error"}, &S3ErrorResponse{
-					Code:    "NoSuchKey",
-					Message: "The specified key does not exist",
-					Key:     path,
-				})
+				errorXML := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchKey</Code><Message>The specified key does not exist</Message><Key>%s</Key></Error>`, html.EscapeString(path))
+				w.Write([]byte(errorXML))
 			}
 
 		case "PUT":
@@ -1025,7 +1015,6 @@ func TestBufferedReader(t *testing.T) {
 	})
 
 	t.Run("EOF detection", func(t *testing.T) {
-		data := []byte("content")
 		reader := newBufferedReader(strings.NewReader("content"), 1024)
 
 		assert.False(t, reader.hasMoreThan(1024))
@@ -1074,7 +1063,7 @@ func BenchmarkLightweightS3Service_SignRequest(b *testing.B) {
 }
 
 func BenchmarkLightweightS3Service_UploadStream_Small(b *testing.B) {
-	server, files := createMockMultipartS3Server(b)
+	server, _ := createMockMultipartS3Server(&testing.T{})
 	defer server.Close()
 
 	service := &LightweightS3Service{
