@@ -1,119 +1,334 @@
-# Implementation Progress
+# FilesOnTheGo Implementation Progress
 
-Last Updated: 2025-11-21
+This file tracks the progress of implementing the FilesOnTheGo project across 16 steps organized into 5 dependency groups.
 
-## Overall Status
-- **Current Phase**: Group 2 - Core Services
-- **Steps Completed**: 4/16 (25%)
-- **Steps In Progress**: 0/16 (0%)
-- **Estimated Completion**: TBD
+## Overall Progress
+
+**Completed:** 4 / 16 steps (25%)
+**In Progress:** 0 / 16 steps
+**Pending:** 12 / 16 steps
+
+---
+
+## How to Use This File
+
+For each step, use the **"Prompt to Paste"** command to have Claude implement that step. This will load the detailed instructions from the corresponding step file.
+
+### Command Format
+```
+Implement the next step from plan/PROGRESS.md. Read plan/step_XX_<name>.md and follow all instructions.
+```
+
+Or paste the specific prompt shown for each step below.
+
+---
 
 ## Group 1: Foundation (30 min)
-- [x] **Step 01**: Project scaffolding and PocketBase setup ✅ COMPLETED
-  - Completed: 2025-11-21
-  - Status: All tests passing, basic project structure in place
 
-## Group 2: Core Services (45 min)
-- [x] **Step 02**: S3 service implementation ✅ COMPLETED
-  - Completed: 2025-11-21
-  - Status: All methods implemented with comprehensive tests, security features, and error handling
-  - Dependencies: Step 01 ✅
+### ✅ Step 01: Project Scaffolding and PocketBase Setup
+**Status:** ✅ COMPLETED
+**Duration:** 30 minutes
+**Dependencies:** None
+**Completion Date:** Not tracked
 
-- [ ] **Step 03**: Database models/collections setup ⏳ PENDING
-  - Status: Not started
-  - Dependencies: Step 01 ✅
+**Prompt to Paste:**
+```
+Read plan/step_01_project_scaffolding.md and implement Step 01: Project scaffolding and PocketBase setup. Follow all instructions, including tests and commit message format.
+```
 
-- [x] **Step 04**: Permission service implementation ✅ COMPLETED
-  - Completed: 2025-11-21
-  - Status: All methods implemented with security features (rate limiting, audit logging, bcrypt password hashing)
-  - Dependencies: Step 01 ✅
+---
 
-- [x] **Step 05**: Basic HTMX UI layout ✅ COMPLETED
-  - Completed: 2025-11-21
-  - Status: All templates, layouts, components, and auth handlers implemented with Tailwind CSS
-  - Dependencies: Step 01 ✅
+## Group 2: Core Services (45 min - run 4 in parallel)
 
-## Group 3: Business Logic (60 min)
-- [ ] **Step 06**: File upload handler ⏳ PENDING
-  - Dependencies: Steps 02 ✅, 03 ⏳, 04 ⏳
+### ✅ Step 02: S3 Service Implementation
+**Status:** ✅ COMPLETED
+**Duration:** 45 minutes
+**Dependencies:** Step 01
+**Completion Date:** 2025-11-21
 
-- [ ] **Step 07**: File download handler ⏳ PENDING
-  - Dependencies: Steps 02 ✅, 03 ⏳, 04 ⏳
+**Prompt to Paste:**
+```
+Read plan/step_02_s3_service.md and implement Step 02: S3 service implementation with full test coverage. Follow all instructions including the commit message format specified in the file.
+```
 
-- [ ] **Step 08**: Directory management ⏳ PENDING
-  - Dependencies: Steps 02 ✅, 03 ⏳, 04 ⏳
+---
 
-- [ ] **Step 09**: Share service implementation ⏳ PENDING
-  - Dependencies: Steps 02 ✅, 03 ⏳, 04 ⏳
+### ✅ Step 03: Database Models and Collections Setup
+**Status:** ✅ COMPLETED
+**Duration:** 45 minutes
+**Dependencies:** Step 01
+**Completion Date:** 2025-11-21
+**Branch:** `claude/execute-step-1-01DKwGazmJMdj8obJvioNbFv`
+**Commits:** 863ce55, f675538
 
-## Group 4: Frontend Components (45 min)
-- [ ] **Step 10**: File browser UI component ⏳ PENDING
-  - Dependencies: Steps 05 ✅, 06 ⏳, 07 ⏳, 08 ⏳
+**Prompt to Paste:**
+```
+Read plan/step_03_database_models.md and implement Step 03: Database models and collections setup. Follow all instructions including tests and commit message format.
+```
 
-- [ ] **Step 11**: Upload UI component ⏳ PENDING
-  - Dependencies: Steps 05 ✅, 06 ⏳
+**Note:** See `step_03_COMPLETED.md` for completion details.
 
-- [ ] **Step 12**: Share creation UI ⏳ PENDING
-  - Dependencies: Steps 05 ✅, 09 ⏳
+---
 
-- [ ] **Step 13**: Public share page ⏳ PENDING
-  - Dependencies: Steps 05 ✅, 09 ⏳
+### ✅ Step 04: Permission Service Implementation
+**Status:** ✅ COMPLETED
+**Duration:** 45 minutes
+**Dependencies:** Step 01, Step 03
+**Completion Date:** 2025-11-21
+
+**Prompt to Paste:**
+```
+Read plan/step_04_permission_service.md and implement Step 04: Permission service with comprehensive validation logic and security tests. Follow all instructions including the commit message format.
+```
+
+---
+
+### ⏳ Step 05: Basic HTMX UI Layout
+**Status:** ⏳ PENDING
+**Duration:** 45 minutes
+**Dependencies:** Step 01
+
+**Prompt to Paste:**
+```
+Read plan/step_05_basic_ui_layout.md and implement Step 05: Basic HTMX UI layout with Tailwind CSS styling. Follow all instructions including the commit message format.
+```
+
+---
+
+## Group 3: Business Logic (60 min - run 4 in parallel)
+
+### ⏳ Step 06: File Upload Handler
+**Status:** ⏳ PENDING
+**Duration:** 60 minutes
+**Dependencies:** Step 02, Step 03, Step 04
+
+**Prompt to Paste:**
+```
+Read plan/step_06_file_upload_handler.md and implement Step 06: File upload handler with streaming support and validation. Follow all instructions including tests and commit message format.
+```
+
+---
+
+### ⏳ Step 07: File Download Handler
+**Status:** ⏳ PENDING
+**Duration:** 60 minutes
+**Dependencies:** Step 02, Step 03, Step 04
+
+**Prompt to Paste:**
+```
+Read plan/step_07_file_download_handler.md and implement Step 07: File download handler with pre-signed URLs and streaming. Follow all instructions including tests and commit message format.
+```
+
+---
+
+### ⏳ Step 08: Directory Management
+**Status:** ⏳ PENDING
+**Duration:** 60 minutes
+**Dependencies:** Step 03, Step 04
+
+**Prompt to Paste:**
+```
+Read plan/step_08_directory_management.md and implement Step 08: Directory management with CRUD operations. Follow all instructions including tests and commit message format.
+```
+
+---
+
+### ⏳ Step 09: Share Service Implementation
+**Status:** ⏳ PENDING
+**Duration:** 60 minutes
+**Dependencies:** Step 03, Step 04
+
+**Prompt to Paste:**
+```
+Read plan/step_09_share_service.md and implement Step 09: Share service with permission validation and token generation. Follow all instructions including tests and commit message format.
+```
+
+---
+
+## Group 4: Frontend Components (45 min - run 4 in parallel)
+
+### ⏳ Step 10: File Browser UI Component
+**Status:** ⏳ PENDING
+**Duration:** 45 minutes
+**Dependencies:** Step 05, Step 06, Step 07, Step 08
+
+**Prompt to Paste:**
+```
+Read plan/step_10_file_browser_ui.md and implement Step 10: File browser UI with HTMX interactions. Follow all instructions including the commit message format.
+```
+
+---
+
+### ⏳ Step 11: Upload UI Component
+**Status:** ⏳ PENDING
+**Duration:** 45 minutes
+**Dependencies:** Step 05, Step 06
+
+**Prompt to Paste:**
+```
+Read plan/step_11_upload_ui.md and implement Step 11: Upload UI with drag-and-drop support. Follow all instructions including the commit message format.
+```
+
+---
+
+### ⏳ Step 12: Share Creation UI
+**Status:** ⏳ PENDING
+**Duration:** 45 minutes
+**Dependencies:** Step 05, Step 09
+
+**Prompt to Paste:**
+```
+Read plan/step_12_share_creation_ui.md and implement Step 12: Share creation UI with permission controls. Follow all instructions including the commit message format.
+```
+
+---
+
+### ⏳ Step 13: Public Share Page
+**Status:** ⏳ PENDING
+**Duration:** 45 minutes
+**Dependencies:** Step 05, Step 07, Step 09
+
+**Prompt to Paste:**
+```
+Read plan/step_13_public_share_page.md and implement Step 13: Public share page with permission-based UI. Follow all instructions including the commit message format.
+```
+
+---
 
 ## Group 5: Quality Assurance (90 min)
-- [ ] **Step 14**: Integration tests ⏳ PENDING
-  - Dependencies: Steps 06 ⏳, 07 ⏳, 08 ⏳, 09 ⏳, 10 ⏳, 11 ⏳, 12 ⏳, 13 ⏳
 
-- [ ] **Step 15**: Security tests ⏳ PENDING
-  - Dependencies: Steps 06 ⏳, 07 ⏳, 08 ⏳, 09 ⏳, 10 ⏳, 11 ⏳, 12 ⏳, 13 ⏳
+### ⏳ Step 14: Integration Tests
+**Status:** ⏳ PENDING
+**Duration:** 60 minutes
+**Dependencies:** Steps 01-13
+**Can run in parallel with:** Step 15
 
-- [ ] **Step 16**: Documentation & deployment ⏳ PENDING
-  - Dependencies: Steps 14 ⏳, 15 ⏳
+**Prompt to Paste:**
+```
+Read plan/step_14_integration_tests.md and implement Step 14: Comprehensive integration tests for all workflows. Follow all instructions including the commit message format.
+```
 
-## Legend
-- ✅ COMPLETED - Step is done and verified
-- 🔄 IN PROGRESS - Currently being implemented
-- ⏳ PENDING - Waiting for dependencies or not started
-- ❌ BLOCKED - Cannot proceed due to issues
+---
 
-## Notes
+### ⏳ Step 15: Security Tests
+**Status:** ⏳ PENDING
+**Duration:** 60 minutes
+**Dependencies:** Steps 01-13
+**Can run in parallel with:** Step 14
 
-### Completed Steps
-- **Step 01** (2025-11-21): Successfully set up project scaffolding with PocketBase, Go modules, and basic configuration
-- **Step 02** (2025-11-21): Implemented comprehensive S3 service layer with:
-  - 8 core methods (upload, download, delete, presigned URLs, metadata, batch operations)
-  - AWS SDK v2 integration (v1.40.0+) with S3-compatible storage support
-  - Path traversal protection with Windows/Unix path sanitization
-  - 40+ unit tests with mocking, security tests, and benchmarks
-  - Custom error types and comprehensive structured logging
-  - 76.6% test coverage with all tests passing
-  - Interface-based design for mockable testing
-- **Step 04** (2025-11-21): Implemented comprehensive permission validation service with:
-  - PermissionService interface with all file, directory, and share methods
-  - File permission checks (read, upload, delete, move) with ownership validation
-  - Directory permission checks (read, create, delete)
-  - Share token validation with expiration and password protection (bcrypt)
-  - Permission matrix enforcement (read, read_upload, upload_only)
-  - User quota management and size validation
-  - Rate limiting (10 attempts/minute) with automatic cleanup
-  - Comprehensive audit logging for all permission denials
-  - Permission middleware (file ownership, directory access, share validation, upload access, quota checks)
-  - Compatible with PocketBase v0.33.0 API
-  - Secure password comparison using bcrypt (constant-time)
-  - Recursive directory hierarchy checks with cycle detection
-- **Step 05** (2025-11-21): Implemented basic HTMX UI layout with:
-  - Tailwind CSS configuration and build process
-  - Base layout templates (base, auth, app)
-  - Reusable UI components (header, breadcrumb, toast, modal, loading)
-  - Authentication pages (login, register) with HTMX forms
-  - Dashboard page with empty state
-  - Template rendering system with HTMX detection
-  - Authentication routes and handlers
-  - Responsive design for mobile, tablet, and desktop
+**Prompt to Paste:**
+```
+Read plan/step_15_security_tests.md and implement Step 15: Security tests covering OWASP Top 10 and threat model. Follow all instructions including the commit message format.
+```
 
-### Blockers
-None currently
+---
 
-### Next Actions
-1. Complete remaining Group 2 steps (03-04) - database models and permission service
-2. Verify all tests pass for Group 2
-3. Begin Group 3 implementation (steps 06-09) once dependencies are satisfied
+### ⏳ Step 16: Documentation and Deployment
+**Status:** ⏳ PENDING
+**Duration:** 30 minutes
+**Dependencies:** Steps 14, 15 (must pass all tests)
+
+**Prompt to Paste:**
+```
+Read plan/step_16_documentation_deployment.md and implement Step 16: Documentation and deployment configurations. Follow all instructions including the commit message format.
+```
+
+---
+
+## Quick Reference: Execution Order
+
+### Sequential (One Agent)
+1. Complete Step 01 ✅
+2. Complete Steps 02 ✅, 03 ✅, 04 ✅, 05 (any order)
+3. Complete Steps 06, 07, 08, 09 (any order)
+4. Complete Steps 10, 11, 12, 13 (any order)
+5. Complete Steps 14, 15, 16
+
+### Parallel (4 Agents)
+
+**Round 1:** 1 agent
+- Agent 1: Step 01 ✅
+
+**Round 2:** 4 agents in parallel
+- Agent 1: Step 02 ✅
+- Agent 2: Step 03 ✅
+- Agent 3: Step 04 ✅
+- Agent 4: Step 05 ⏳
+
+**Round 3:** 4 agents in parallel (after Round 2 completes)
+- Agent 1: Step 06 ⏳
+- Agent 2: Step 07 ⏳
+- Agent 3: Step 08 ⏳
+- Agent 4: Step 09 ⏳
+
+**Round 4:** 4 agents in parallel (after Round 3 completes)
+- Agent 1: Step 10 ⏳
+- Agent 2: Step 11 ⏳
+- Agent 3: Step 12 ⏳
+- Agent 4: Step 13 ⏳
+
+**Round 5:** 2 agents in parallel, then 1 (after Round 4 completes)
+- Agent 1: Step 14 ⏳
+- Agent 2: Step 15 ⏳
+- (Wait for 14 & 15)
+- Agent 1: Step 16 ⏳
+
+---
+
+## Statistics
+
+### By Status
+- **Completed:** 4 steps (25%)
+- **In Progress:** 0 steps (0%)
+- **Pending:** 12 steps (75%)
+
+### By Group
+- **Group 1 (Foundation):** 1/1 completed (100%)
+- **Group 2 (Core Services):** 4/4 completed (100%)
+- **Group 3 (Business Logic):** 0/4 completed (0%)
+- **Group 4 (Frontend):** 0/4 completed (0%)
+- **Group 5 (QA):** 0/3 completed (0%)
+
+### Time Estimates
+- **Completed:** ~165 minutes (~2.75 hours)
+- **Remaining:** ~225 minutes (~3.75 hours)
+- **Total:** ~390 minutes (~6.5 hours)
+
+---
+
+## Update Instructions
+
+When you complete a step:
+
+1. Update the step's status:
+   - Change `⏳ PENDING` to `✅ COMPLETED`
+   - Add completion date
+   - Add branch name if applicable
+   - Add commit hashes
+
+2. Update the statistics at the top and bottom of this file
+
+3. Commit this file along with your implementation
+
+---
+
+## Testing Requirements Reminder
+
+Each completed step must have:
+- ✅ Minimum 80% test coverage (100% for security code)
+- ✅ All tests passing
+- ✅ Unit tests for business logic
+- ✅ Integration tests for workflows
+- ✅ Security tests for validation
+
+Run before marking complete:
+```bash
+go test ./...                    # All tests pass
+go test -cover ./...             # Check coverage
+go test -race ./...              # No race conditions
+```
+
+---
+
+**Last Updated:** 2025-11-21
+**Document Version:** 1.0
