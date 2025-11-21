@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"unicode"
@@ -28,6 +29,10 @@ func SanitizeFilename(filename string) (string, error) {
 	if strings.Contains(filename, "\x00") {
 		return "", ErrNullByte
 	}
+
+	// Normalize backslashes to forward slashes for cross-platform compatibility
+	// This ensures Windows-style paths are handled correctly on Linux
+	filename = strings.ReplaceAll(filename, "\\", "/")
 
 	// Use filepath.Base to remove any path components
 	// This prevents "../" attacks
@@ -77,17 +82,18 @@ func SanitizePath(path string) (string, error) {
 		return "", fmt.Errorf("%w: path too long (max 1024 characters)", ErrTooLong)
 	}
 
+	// Validate for traversal BEFORE cleaning
+	// This catches attacks like "/documents/../../../etc"
+	if err := ValidatePathTraversal(path); err != nil {
+		return "", err
+	}
+
 	// Clean the path to normalize it
 	cleaned := filepath.Clean(path)
 
 	// Ensure path starts with /
 	if !strings.HasPrefix(cleaned, "/") {
 		cleaned = "/" + cleaned
-	}
-
-	// Validate for traversal
-	if err := ValidatePathTraversal(cleaned); err != nil {
-		return "", err
 	}
 
 	return cleaned, nil
@@ -105,37 +111,40 @@ func ValidatePathTraversal(path string) error {
 		return ErrNullByte
 	}
 
-	// Clean the path
-	cleaned := filepath.Clean(path)
-
-	// Check for ".." components which indicate traversal
-	parts := strings.Split(cleaned, string(filepath.Separator))
-	for _, part := range parts {
-		if part == ".." {
-			return ErrPathTraversal
+	// URL-decode the path to catch encoded traversal attempts
+	// Decode multiple times to catch double-encoding
+	decodedPath := path
+	for i := 0; i < 3; i++ {
+		decoded, err := url.QueryUnescape(decodedPath)
+		if err == nil && decoded != decodedPath {
+			decodedPath = decoded
+		} else {
+			break
 		}
 	}
+
+	// Check for common traversal patterns in both original and decoded paths
+	dangerousPatterns := []string{
+		"../",
+		"..\\",
+		"..",
+	}
+
+	pathsToCheck := []string{path, decodedPath, strings.ToLower(path), strings.ToLower(decodedPath)}
+	for _, p := range pathsToCheck {
+		for _, pattern := range dangerousPatterns {
+			if strings.Contains(p, pattern) {
+				return ErrPathTraversal
+			}
+		}
+	}
+
+	// Clean the path and check for escaping root
+	cleaned := filepath.Clean(path)
 
 	// Additional check: if cleaned path starts with "..", it's traversal
 	if strings.HasPrefix(cleaned, "..") {
 		return ErrPathTraversal
-	}
-
-	// Check for common traversal patterns
-	dangerousPatterns := []string{
-		"../",
-		"..\\",
-		"%2e%2e/",
-		"%2e%2e\\",
-		"..%2f",
-		"..%5c",
-	}
-
-	lowerPath := strings.ToLower(path)
-	for _, pattern := range dangerousPatterns {
-		if strings.Contains(lowerPath, pattern) {
-			return ErrPathTraversal
-		}
 	}
 
 	return nil
