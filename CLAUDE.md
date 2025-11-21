@@ -280,8 +280,8 @@ func BenchmarkFileUpload_1MB(b *testing.B) {
 
 - **Minimum coverage**: 80% for all packages
 - **Critical paths**: 100% coverage for permission validation, authentication, and security-related code
-- **Run coverage**: `go test -cover ./...`
-- **Generate report**: `go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out`
+- **Run coverage**: `make test coverage`
+- **Generate report**: `make test coverage-report`
 
 ### Test Naming Conventions
 
@@ -297,25 +297,25 @@ Examples:
 
 ```bash
 # Run all tests
-go test ./...
+make test
 
 # Run with verbose output
-go test -v ./...
+make test verbose
 
 # Run specific package
-go test ./services/...
+make test packages=./services/...
 
 # Run specific test
-go test -run TestValidateFileAccess ./services/
+make test run=TestValidateFileAccess ./services/
 
 # Run with coverage
-go test -cover ./...
+make test coverage
 
 # Run integration tests only
-go test -tags=integration ./tests/integration/...
+make test tags=integration ./tests/integration/...
 
 # Run security tests only
-go test ./tests/security/...
+make test ./tests/security/...
 ```
 
 ## Development Workflow
@@ -330,7 +330,7 @@ When implementing a new feature:
 4. **Refactor** while keeping tests green
 5. **Add integration tests** for end-to-end flows
 6. **Update documentation** if behavior or APIs change
-7. **Run full test suite** before committing
+7. **Run full test suite** with `make test` before committing
 
 ### 2. Bug Fix Process
 
@@ -738,29 +738,28 @@ Document all endpoints with:
 go run main.go serve
 
 # Run all tests
-go test ./...
+make test
 
 # Run tests with coverage
-go test -cover ./...
+make test coverage
 
 # Run tests with race detection
-go test -race ./...
+make test race
 
 # Generate coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
+make test coverage-report
 
 # Run specific test
-go test -run TestValidateFileAccess ./services/
+make test run=TestValidateFileAccess ./services/
 
 # Run benchmarks
-go test -bench=. ./...
+make test bench=.
 
 # Format code
-go fmt ./...
+make fmt
 
 # Lint code (requires golangci-lint)
-golangci-lint run
+make lint
 
 # Update dependencies
 go get -u ./...
@@ -789,7 +788,7 @@ When starting a new feature, consider:
 - **Keep it simple** - Readable code over clever code
 - **Document the "why"** - Code shows "how", comments explain "why"
 - **Review DESIGN.md** - Ensure alignment with architecture
-- **Run tests before committing** - No broken tests in version control
+- **Run tests before committing** with `make test` - No broken tests in version control
 - **Think about the user** - Both API consumers and end users
 
 ---

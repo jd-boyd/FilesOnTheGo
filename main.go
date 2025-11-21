@@ -3,9 +3,8 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,8 +13,8 @@ import (
 	"github.com/jd-boyd/filesonthego/config"
 	"github.com/jd-boyd/filesonthego/handlers"
 	_ "github.com/jd-boyd/filesonthego/migrations" // Import migrations for side effects
-	"github.com/jd-boyd/filesonthego/services"
 	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
 )
@@ -96,86 +95,46 @@ func main() {
 		return nil
 	})
 
-	// Log when the server is starting
-	app.OnServe().BindFunc(func(_ *core.ServeEvent) error {
-		logger.Info().
-			Str("address", ":"+cfg.AppPort).
-			Bool("tls_enabled", cfg.TLSEnabled).
-			Msg("PocketBase HTTP server starting")
-		return nil
-	})
-
 	// Set up graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// Handle OS signals for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Initialize TLS service if TLS is enabled
-	var tlsService *services.TLSService
-	var httpRedirectServer *http.Server
-	var httpsServer *http.Server
-
-	if cfg.TLSEnabled {
-		tlsService = services.NewTLSService(cfg)
-
-		// Get TLS configuration
-		tlsConfig, err := tlsService.GetTLSConfig()
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to initialize TLS configuration")
-		}
-
-		logger.Info().
-			Str("tls_port", cfg.TLSPort).
-			Bool("letsencrypt", cfg.LetsEncryptEnabled).
-			Msg("TLS initialized successfully")
-
-		// Set up HTTPS server using PocketBase's router
-		// We need to start PocketBase first to get the router, then attach it to HTTPS
-		app.OnServe().BindFunc(func(e *core.ServeEvent) error {
-			httpsServer = &http.Server{
-				Addr:      ":" + cfg.TLSPort,
-				Handler:   e.Router,
-				TLSConfig: tlsConfig,
-			}
-
-			go func() {
-				logger.Info().
-					Str("address", ":"+cfg.TLSPort).
-					Msg("Starting HTTPS server")
-				if err := httpsServer.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-					logger.Error().Err(err).Msg("HTTPS server error")
-				}
-			}()
-
-			return nil
-		})
-
-		// Start HTTP redirect server if TLS redirect is enabled
-		if cfg.TLSRedirect {
-			httpRedirectServer = &http.Server{
-				Addr:    ":" + cfg.AppPort,
-				Handler: tlsService.GetRedirectAndChallengeHandler(),
-			}
-
-			go func() {
-				logger.Info().
-					Str("address", ":"+cfg.AppPort).
-					Msg("Starting HTTP redirect server")
-				if err := httpRedirectServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-					logger.Error().Err(err).Msg("HTTP redirect server error")
-				}
-			}()
-		}
-	}
-
-	// Start PocketBase in a goroutine
+	// Start PocketBase server in a goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		if err := app.Start(); err != nil {
-			errChan <- err
+		defer func() {
+			if r := recover(); r != nil {
+				errChan <- fmt.Errorf("panic: %v", r)
+			}
+		}()
+
+		// Configure server addresses based on TLS settings
+		var httpAddr, httpsAddr string
+		var certificateDomains []string
+
+		if cfg.TLSEnabled {
+			httpsAddr = ":" + cfg.TLSPort
+			if cfg.TLSRedirect {
+				// If TLS redirect is enabled, we'll run HTTP on the standard port for redirects
+				httpAddr = ":" + cfg.AppPort
+			}
+			// Add custom domain for Let's Encrypt if configured
+			if cfg.LetsEncryptEnabled && cfg.LetsEncryptDomain != "" {
+				certificateDomains = append(certificateDomains, cfg.LetsEncryptDomain)
+			}
+		} else {
+			httpAddr = ":" + cfg.AppPort
+		}
+
+		// Use PocketBase's built-in serve function which handles TLS properly
+		if err := apis.Serve(app, apis.ServeConfig{
+			ShowStartBanner: false, // We have our own logging
+			HttpAddr:        httpAddr,
+			HttpsAddr:       httpsAddr,
+			CertificateDomains: certificateDomains,
+		}); err != nil {
+			errChan <- fmt.Errorf("failed to start server: %w", err)
 		}
 	}()
 
@@ -186,36 +145,15 @@ func main() {
 			Str("signal", sig.String()).
 			Msg("Received shutdown signal, initiating graceful shutdown")
 
-		// Create a context with timeout for graceful shutdown
-		shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
-		defer shutdownCancel()
+		// Give some time for graceful shutdown
+		shutdownTimer := time.NewTimer(30 * time.Second)
+		defer shutdownTimer.Stop()
 
-		// Perform graceful shutdown operations here
-		logger.Info().Msg("Graceful shutdown initiated")
-
-		// Shutdown HTTPS server if running
-		if httpsServer != nil {
-			logger.Info().Msg("Shutting down HTTPS server")
-			if err := httpsServer.Shutdown(shutdownCtx); err != nil {
-				logger.Error().Err(err).Msg("Error shutting down HTTPS server")
-			}
-		}
-
-		// Shutdown HTTP redirect server if running
-		if httpRedirectServer != nil {
-			logger.Info().Msg("Shutting down HTTP redirect server")
-			if err := httpRedirectServer.Shutdown(shutdownCtx); err != nil {
-				logger.Error().Err(err).Msg("Error shutting down HTTP redirect server")
-			}
-		}
-
-		// Wait for shutdown context to complete or timeout
-		<-shutdownCtx.Done()
-
-		if shutdownCtx.Err() == context.DeadlineExceeded {
-			logger.Warn().Msg("Shutdown timeout exceeded, forcing exit")
-		} else {
-			logger.Info().Msg("Shutdown completed successfully")
+		select {
+		case <-time.After(30 * time.Second):
+			logger.Warn().Msg("Shutdown timeout exceeded")
+		case <-errChan:
+			logger.Info().Msg("Server shutdown completed")
 		}
 
 	case err := <-errChan:
