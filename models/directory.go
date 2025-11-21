@@ -108,7 +108,7 @@ func (d *Directory) GetBreadcrumbs(app *pocketbase.PocketBase) ([]*Breadcrumb, e
 		}
 
 		// Fetch parent directory
-		record, err := app.Dao().FindRecordById("directories", current.ParentDirectory)
+		record, err := app.FindRecordById("directories", current.ParentDirectory)
 		if err != nil {
 			// Parent not found, break the chain
 			break

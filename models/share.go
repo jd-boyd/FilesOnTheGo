@@ -96,13 +96,13 @@ func (s *Share) IncrementAccessCount(app *pocketbase.PocketBase) error {
 	s.AccessCount++
 
 	// Update the record in the database
-	record, err := app.Dao().FindRecordById("shares", s.Id)
+	record, err := app.FindRecordById("shares", s.Id)
 	if err != nil {
 		return err
 	}
 
 	record.Set("access_count", s.AccessCount)
-	if err := app.Dao().SaveRecord(record); err != nil {
+	if err := app.Save(record); err != nil {
 		return err
 	}
 
