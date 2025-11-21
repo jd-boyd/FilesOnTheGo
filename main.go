@@ -10,6 +10,7 @@ import (
 
 	"github.com/jd-boyd/filesonthego/config"
 	"github.com/jd-boyd/filesonthego/handlers"
+	_ "github.com/jd-boyd/filesonthego/migrations" // Import migrations for side effects
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
