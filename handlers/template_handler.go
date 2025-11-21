@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"errors"
 	"html/template"
 	"io"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -51,6 +53,15 @@ func NewTemplateRenderer(baseDir string) *TemplateRenderer {
 	}
 }
 
+// getTemplateFuncs returns custom template functions
+func getTemplateFuncs() template.FuncMap {
+	return template.FuncMap{
+		"upper": strings.ToUpper,
+		"lower": strings.ToLower,
+		"title": strings.Title,
+	}
+}
+
 // LoadTemplates loads all templates from the templates directory
 func (r *TemplateRenderer) LoadTemplates() error {
 	r.mu.Lock()
@@ -86,8 +97,9 @@ func (r *TemplateRenderer) LoadTemplates() error {
 			fullPaths[i] = filepath.Join(r.baseDir, file)
 		}
 
-		// Parse templates
-		tmpl, err := template.ParseFiles(fullPaths...)
+		// Parse templates with custom functions
+		tmpl := template.New(name).Funcs(getTemplateFuncs())
+		tmpl, err := tmpl.ParseFiles(fullPaths...)
 		if err != nil {
 			return err
 		}
@@ -113,9 +125,13 @@ func (r *TemplateRenderer) Render(w io.Writer, name string, data interface{}) er
 		}
 		r.mu.RLock()
 		tmpl = r.templates[name]
+		if tmpl == nil {
+			return errors.New("template not found: " + name)
+		}
 	}
 
-	return tmpl.Execute(w, data)
+	// Execute the base.html template which is the entry point
+	return tmpl.ExecuteTemplate(w, "base.html", data)
 }
 
 // IsHTMXRequest checks if the request is from HTMX

@@ -1,7 +1,7 @@
 {{template "base.html" .}}
 
 {{define "header"}}
-{{template "components/header.html" .}}
+{{template "header.html" .}}
 {{end}}
 
 {{define "content"}}
@@ -9,7 +9,7 @@
     <!-- Breadcrumb -->
     {{if .Breadcrumb}}
     <div class="mb-6">
-        {{template "components/breadcrumb.html" .}}
+        {{template "breadcrumb.html" .}}
     </div>
     {{end}}
 
