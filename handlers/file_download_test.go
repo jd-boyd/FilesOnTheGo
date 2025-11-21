@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -216,6 +217,14 @@ func TestHandleDownload_StreamFile_Logic(t *testing.T) {
 	downloadedReader, err := mockS3.DownloadFile("test-key")
 	assert.NoError(t, err)
 	assert.NotNil(t, downloadedReader)
+
+	// Test metadata retrieval
+	metadata, err := mockS3.GetFileMetadata("test-key")
+	assert.NoError(t, err)
+	assert.NotNil(t, metadata)
+	assert.Equal(t, int64(len(testContent)), metadata.Size)
+	assert.Equal(t, "text/plain", metadata.ContentType)
+	assert.Equal(t, "test-etag", metadata.ETag)
 
 	// Read and verify content
 	content, err := io.ReadAll(downloadedReader)

@@ -605,6 +605,11 @@ func SanitizeFileName(filename string) string {
 	// Extract base filename
 	filename = filepath.Base(filename)
 
+	// Handle case where filepath.Base returns "." for empty input
+	if filename == "." || filename == "/" {
+		filename = ""
+	}
+
 	// Remove or replace dangerous characters
 	filename = strings.Map(func(r rune) rune {
 		if r < 32 || r == 127 { // Control characters
@@ -617,9 +622,23 @@ func SanitizeFileName(filename string) string {
 		return r
 	}, filename)
 
-	// Limit length
+	// Limit length while preserving file extension if possible
 	if len(filename) > 255 {
-		filename = filename[:255]
+		ext := filepath.Ext(filename)
+		nameWithoutExt := filename[:len(filename)-len(ext)]
+
+		// Reserve space for extension, ensure at least 1 character for name
+		maxNameLen := 255 - len(ext)
+		if maxNameLen < 1 {
+			maxNameLen = 1
+			ext = ""
+		}
+
+		if len(nameWithoutExt) > maxNameLen {
+			nameWithoutExt = nameWithoutExt[:maxNameLen]
+		}
+
+		filename = nameWithoutExt + ext
 	}
 
 	if filename == "" {
