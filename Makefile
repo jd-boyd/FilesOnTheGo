@@ -29,6 +29,8 @@ help:
 	@echo "  test        Run all tests"
 	@echo "  test-unit   Run unit tests only"
 	@echo "  test-integration Run integration tests only"
+	@echo "  test-container Run container integration tests with full setup"
+	@echo "  test-container-only Run container tests without setup"
 	@echo "  test-coverage Run tests with coverage report"
 	@echo "  benchmark   Run benchmark tests"
 	@echo "  race        Run tests with race detection"
@@ -135,6 +137,21 @@ test-integration:
 	else \
 		echo "No integration tests found in tests/integration/"; \
 	fi
+
+.PHONY: test-container
+test-container:
+	@echo "Running container integration tests..."
+	@if [ -f "run_tests.sh" ]; then \
+		./run_tests.sh; \
+	else \
+		echo "Container test runner not found. Using go test directly..."; \
+		go test -v -tags=container ./tests/integration/...; \
+	fi
+
+.PHONY: test-container-only
+test-container-only:
+	@echo "Running container integration tests only (no setup)..."
+	go test -v -tags=container ./tests/integration/... -timeout=5m
 
 .PHONY: test-coverage
 test-coverage:

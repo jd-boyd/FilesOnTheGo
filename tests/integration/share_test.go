@@ -35,10 +35,10 @@ func setupIntegrationTest(t *testing.T) *TestApp {
 	})
 
 	app := pocketbase.NewWithConfig(pocketbase.Config{
-		DataDir:          tmpDir,
-		DataMaxOpenConns: 10,
-		DataMaxIdleConns: 2,
-		EncryptionEnv:    "test",
+		DefaultDataDir:       tmpDir,
+		DataMaxOpenConns:     10,
+		DataMaxIdleConns:     2,
+		DefaultEncryptionEnv: "test",
 	})
 
 	shareService := services.NewShareService(app)
@@ -54,8 +54,8 @@ func setupIntegrationTest(t *testing.T) *TestApp {
 
 // createTestUser creates a test user and returns the record
 func (ta *TestApp) createTestUser(t *testing.T) *core.Record {
-	collection := ta.app.FindCollectionByNameOrId("users")
-	if collection == nil {
+	collection, err := ta.app.FindCollectionByNameOrId("users")
+	if err != nil {
 		t.Skip("users collection not found")
 	}
 
@@ -64,7 +64,7 @@ func (ta *TestApp) createTestUser(t *testing.T) *core.Record {
 	record.Set("username", "integrationuser")
 	record.SetPassword("testpassword")
 
-	err := ta.app.Save(record)
+	err = ta.app.Save(record)
 	require.NoError(t, err)
 
 	return record
@@ -72,8 +72,8 @@ func (ta *TestApp) createTestUser(t *testing.T) *core.Record {
 
 // createTestFile creates a test file
 func (ta *TestApp) createTestFile(t *testing.T, userID string) *core.Record {
-	collection := ta.app.FindCollectionByNameOrId("files")
-	if collection == nil {
+	collection, err := ta.app.FindCollectionByNameOrId("files")
+	if err != nil {
 		t.Skip("files collection not found")
 	}
 
@@ -84,7 +84,7 @@ func (ta *TestApp) createTestFile(t *testing.T, userID string) *core.Record {
 	record.Set("size", 2048)
 	record.Set("mime_type", "text/plain")
 
-	err := ta.app.Save(record)
+	err = ta.app.Save(record)
 	require.NoError(t, err)
 
 	return record
@@ -93,7 +93,7 @@ func (ta *TestApp) createTestFile(t *testing.T, userID string) *core.Record {
 func TestIntegration_CreateShareFlow(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -143,7 +143,7 @@ func TestIntegration_CreateShareFlow(t *testing.T) {
 func TestIntegration_CreateShareWithPassword(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -184,7 +184,7 @@ func TestIntegration_CreateShareWithPassword(t *testing.T) {
 func TestIntegration_CreateShareWithExpiration(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -227,7 +227,7 @@ func TestIntegration_CreateShareWithExpiration(t *testing.T) {
 func TestIntegration_ListUserShares(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -235,7 +235,7 @@ func TestIntegration_ListUserShares(t *testing.T) {
 	file1 := testApp.createTestFile(t, user.Id)
 
 	// Create file 2
-	collection := testApp.app.FindCollectionByNameOrId("files")
+	collection, err := testApp.app.FindCollectionByNameOrId("files")
 	file2 := core.NewRecord(collection)
 	file2.Set("user", user.Id)
 	file2.Set("name", "integration-test2.txt")
@@ -285,7 +285,7 @@ func TestIntegration_ListUserShares(t *testing.T) {
 func TestIntegration_RevokeShare(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -327,7 +327,7 @@ func TestIntegration_RevokeShare(t *testing.T) {
 func TestIntegration_AccessPublicShare_Valid(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -369,7 +369,7 @@ func TestIntegration_AccessPublicShare_Valid(t *testing.T) {
 func TestIntegration_AccessPublicShare_PasswordProtected(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -414,7 +414,7 @@ func TestIntegration_AccessPublicShare_PasswordProtected(t *testing.T) {
 func TestIntegration_ValidateSharePassword_Correct(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -464,7 +464,7 @@ func TestIntegration_ValidateSharePassword_Correct(t *testing.T) {
 func TestIntegration_ValidateSharePassword_Wrong(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
@@ -512,7 +512,7 @@ func TestIntegration_ValidateSharePassword_Wrong(t *testing.T) {
 func TestIntegration_UpdateShareExpiration(t *testing.T) {
 	testApp := setupIntegrationTest(t)
 
-	if testApp.app.FindCollectionByNameOrId("shares") == nil {
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
 		t.Skip("shares collection not found")
 	}
 
