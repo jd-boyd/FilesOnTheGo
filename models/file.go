@@ -98,7 +98,19 @@ func (f *File) Validate() error {
 }
 
 // GetExtension returns the file extension (including the dot)
+// Dotfiles (e.g., .gitignore, .bashrc) that have no additional dots
+// are treated as having no extension
 func (f *File) GetExtension() string {
+	// Handle dotfiles: if the name starts with . and has no other dots,
+	// it's a dotfile with no extension
+	if strings.HasPrefix(f.Name, ".") {
+		// Count dots in the filename
+		dotCount := strings.Count(f.Name, ".")
+		if dotCount == 1 {
+			// Only one dot at the start, so no extension
+			return ""
+		}
+	}
 	return filepath.Ext(f.Name)
 }
 
