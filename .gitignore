@@ -16,6 +16,7 @@
 coverage.*
 *.coverprofile
 profile.cov
+*.log
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -27,6 +28,17 @@ go.work.sum
 # env file
 .env
 
+# PocketBase data directory
+pb_data/
+
+# Build artifacts
+filesonthego
+dist/
+build/
+
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
