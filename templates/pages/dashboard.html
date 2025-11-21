@@ -1,0 +1,104 @@
+{{template "app.html" .}}
+
+{{define "title"}}Dashboard - FilesOnTheGo{{end}}
+
+{{define "page-header"}}
+<h1 class="text-2xl font-bold text-gray-900">My Files</h1>
+{{end}}
+
+{{define "page-actions"}}
+<button type="button"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+        onclick="createFolder()">
+    <svg class="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+    </svg>
+    New Folder
+</button>
+{{end}}
+
+{{define "app-content"}}
+<div class="p-6">
+    <!-- Storage Usage Card -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-medium text-blue-900">Storage Usage</h3>
+                <p class="text-2xl font-bold text-blue-900 mt-1">
+                    {{if .StorageUsed}}{{.StorageUsed}}{{else}}0 MB{{end}}
+                    <span class="text-sm font-normal text-blue-700">
+                        / {{if .StorageQuota}}{{.StorageQuota}}{{else}}10 GB{{end}}
+                    </span>
+                </p>
+            </div>
+            <svg class="h-12 w-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+            </svg>
+        </div>
+        <!-- Progress Bar -->
+        <div class="mt-4">
+            <div class="bg-blue-200 rounded-full h-2">
+                <div class="bg-blue-600 h-2 rounded-full"
+                     style="width: {{if .StoragePercent}}{{.StoragePercent}}%{{else}}5%{{end}}"></div>
+            </div>
+        </div>
+    </div>
+
+    {{if .HasFiles}}
+    <!-- Files List -->
+    <div id="files-list">
+        <!-- This will be populated by HTMX -->
+        <div class="text-center text-gray-500 py-8">
+            <div class="htmx-indicator">
+                {{template "loading.html" .}}
+            </div>
+        </div>
+    </div>
+    {{else}}
+    <!-- Empty State -->
+    <div class="text-center py-12">
+        <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No files yet</h3>
+        <p class="mt-2 text-sm text-gray-500">
+            Get started by uploading your first file
+        </p>
+        <div class="mt-6">
+            <button type="button"
+                    class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    onclick="openUploadModal()">
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Upload Files
+            </button>
+        </div>
+    </div>
+    {{end}}
+
+    <!-- Recent Activity (Optional) -->
+    {{if .RecentActivity}}
+    <div class="mt-8 border-t border-gray-200 pt-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
+        <div class="space-y-3">
+            {{range .RecentActivity}}
+            <div class="flex items-center space-x-3 text-sm">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-gray-900 truncate">{{.FileName}}</p>
+                </div>
+                <div class="flex-shrink-0 text-gray-500">
+                    {{.Action}} • {{.Time}}
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}

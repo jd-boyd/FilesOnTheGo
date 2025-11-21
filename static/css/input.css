@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  html {
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+/* HTMX Loading Indicators */
+@layer components {
+  .htmx-indicator {
+    @apply opacity-0 transition-opacity duration-200;
+  }
+
+  .htmx-request .htmx-indicator {
+    @apply opacity-100;
+  }
+
+  .htmx-request.htmx-indicator {
+    @apply opacity-100;
+  }
+}

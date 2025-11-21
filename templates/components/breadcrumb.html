@@ -1,0 +1,39 @@
+<nav aria-label="Breadcrumb" class="flex">
+    <ol role="list" class="flex items-center space-x-2">
+        <!-- Home -->
+        <li>
+            <div>
+                <a href="/dashboard" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                    </svg>
+                    <span class="sr-only">Home</span>
+                </a>
+            </div>
+        </li>
+
+        <!-- Breadcrumb Items -->
+        {{range .Breadcrumb}}
+        <li>
+            <div class="flex items-center">
+                <svg class="h-5 w-5 flex-shrink-0 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                {{if .URL}}
+                <a href="{{.URL}}"
+                   class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+                   hx-get="{{.URL}}"
+                   hx-target="#main-content"
+                   hx-push-url="true">
+                    {{.Name}}
+                </a>
+                {{else}}
+                <span class="ml-2 text-sm font-medium text-gray-700" aria-current="page">
+                    {{.Name}}
+                </span>
+                {{end}}
+            </div>
+        </li>
+        {{end}}
+    </ol>
+</nav>

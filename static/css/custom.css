@@ -1,0 +1,165 @@
+/* Custom CSS for FilesOnTheGo */
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Toast Animations */
+.toast-enter {
+    animation: slideInRight 0.3s ease-out;
+}
+
+.toast-exit {
+    animation: slideOutRight 0.3s ease-in;
+}
+
+/* HTMX Loading States */
+.htmx-swapping {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+}
+
+.htmx-settling {
+    opacity: 1;
+    transition: opacity 0.2s ease-in;
+}
+
+/* Modal Transitions */
+.modal-backdrop {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* File Upload Progress */
+.upload-progress {
+    transition: width 0.3s ease-out;
+}
+
+/* Hover Effects */
+.file-item:hover {
+    @apply bg-gray-50 cursor-pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+
+/* Focus States */
+.focus-visible {
+    @apply outline-none ring-2 ring-offset-2 ring-primary;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+}
+
+/* Drag and Drop States */
+.drag-over {
+    @apply border-primary bg-blue-50 border-dashed border-2;
+}
+
+.dragging {
+    @apply opacity-50;
+}
+
+/* Skeleton Loading */
+.skeleton {
+    @apply bg-gray-200 animate-pulse rounded;
+}
+
+/* Button Loading State */
+.btn-loading {
+    @apply relative text-transparent pointer-events-none;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}
