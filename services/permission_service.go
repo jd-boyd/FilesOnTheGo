@@ -1,7 +1,6 @@
 package services
 
 import (
-	"crypto/subtle"
 	"errors"
 	"fmt"
 	"sync"
@@ -464,10 +463,7 @@ func (s *PermissionServiceImpl) ValidateShareToken(shareToken, password string) 
 
 	// Check if expired
 	expiresAt := share.GetDateTime("expires_at")
-	isExpired := false
-	if !expiresAt.IsZero() && expiresAt.Time().Before(time.Now()) {
-		isExpired = true
-	}
+	isExpired := !expiresAt.IsZero() && expiresAt.Time().Before(time.Now())
 
 	// Check password if required
 	passwordHash := share.GetString("password_hash")
@@ -638,9 +634,4 @@ func (s *PermissionServiceImpl) logPermissionDenial(userID, action, resourceID, 
 		Str("resource_id", resourceID).
 		Str("reason", reason).
 		Msg("Permission denied")
-}
-
-// secureCompare performs constant-time string comparison to prevent timing attacks
-func secureCompare(a, b string) bool {
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
