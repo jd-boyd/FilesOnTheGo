@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	"github.com/pocketbase/pocketbase/core"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // TemplateData holds common data passed to templates
@@ -55,10 +57,11 @@ func NewTemplateRenderer(baseDir string) *TemplateRenderer {
 
 // getTemplateFuncs returns custom template functions
 func getTemplateFuncs() template.FuncMap {
+	caser := cases.Title(language.English)
 	return template.FuncMap{
 		"upper": strings.ToUpper,
 		"lower": strings.ToLower,
-		"title": strings.Title,
+		"title": caser.String,
 	}
 }
 
