@@ -1,0 +1,92 @@
+<!-- Upload Form Component -->
+<!-- HTMX-enabled form for file uploads with hidden inputs -->
+<form id="upload-form"
+      hx-post="/api/files/upload"
+      hx-encoding="multipart/form-data"
+      hx-target="#upload-results"
+      hx-swap="beforeend"
+      hx-indicator="#upload-indicator"
+      class="upload-form">
+
+    <!-- Hidden directory ID input -->
+    <input type="hidden"
+           name="directory_id"
+           id="upload-directory-id"
+           value="{{if .CurrentDirectoryID}}{{.CurrentDirectoryID}}{{else}}root{{end}}">
+
+    <!-- Hidden share token input (for shared folder uploads) -->
+    <input type="hidden"
+           name="share_token"
+           id="upload-share-token"
+           value="{{if .ShareToken}}{{.ShareToken}}{{end}}">
+
+    <!-- Drop Zone -->
+    {{template "drop-zone.html" .}}
+
+    <!-- Upload Progress Section -->
+    <div id="upload-progress-section" class="mt-4">
+        {{template "upload-progress.html" .}}
+    </div>
+
+    <!-- Upload Results (for HTMX responses) -->
+    <div id="upload-results" class="mt-4">
+        <!-- Success/error messages will be inserted here -->
+    </div>
+
+    <!-- Upload Controls -->
+    <div id="upload-controls" class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <!-- File count and size summary -->
+        <div id="upload-summary" class="text-sm text-gray-600 hidden">
+            <span id="upload-file-count">0</span> file(s) selected
+            (<span id="upload-total-size">0 KB</span>)
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex items-center space-x-3">
+            <!-- Clear All button -->
+            <button type="button"
+                    id="clear-queue-btn"
+                    class="hidden px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    onclick="clearUploadQueue()">
+                Clear All
+            </button>
+
+            <!-- Upload All button -->
+            <button type="button"
+                    id="upload-all-btn"
+                    class="hidden px-4 py-2 text-sm font-medium text-white bg-primary border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    onclick="startUpload()"
+                    disabled>
+                <svg class="inline-block w-4 h-4 mr-2 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Upload All
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="upload-indicator" class="htmx-indicator fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+        <div class="flex flex-col items-center">
+            <svg class="animate-spin h-10 w-10 text-primary mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm text-gray-600">Uploading...</span>
+        </div>
+    </div>
+</form>
+
+<style>
+    .htmx-indicator {
+        display: none;
+    }
+
+    .htmx-request .htmx-indicator {
+        display: flex;
+    }
+
+    .htmx-request.htmx-indicator {
+        display: flex;
+    }
+</style>

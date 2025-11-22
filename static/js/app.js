@@ -153,17 +153,8 @@ function closeModal(modalId) {
     window.dispatchEvent(event);
 }
 
-// Upload Modal (to be implemented with actual upload functionality)
-function openUploadModal() {
-    // This will be implemented when we add the upload functionality
-    showToast('info', 'Upload feature coming soon');
-}
-
-// Create Folder Function (to be implemented)
-function createFolder() {
-    // This will be implemented when we add folder management
-    showToast('info', 'Create folder feature coming soon');
-}
+// Note: openUploadModal is implemented in upload.js
+// Note: createFolder functionality is in file-browser.js (openNewFolderModal)
 
 // HTMX Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
@@ -198,7 +189,8 @@ window.dismissToast = dismissToast;
 window.formatFileSize = formatFileSize;
 window.formatDate = formatDate;
 window.copyToClipboard = copyToClipboard;
+window.escapeHtml = escapeHtml;
 window.openModal = openModal;
 window.closeModal = closeModal;
-window.openUploadModal = openUploadModal;
-window.createFolder = createFolder;
+// Note: openUploadModal is exported in upload.js
+// Note: createFolder functionality is in file-browser.js (openNewFolderModal)
