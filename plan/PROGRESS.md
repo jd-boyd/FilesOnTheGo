@@ -4,9 +4,9 @@ This file tracks the progress of implementing the FilesOnTheGo project across 16
 
 ## Overall Progress
 
-**Completed:** 8 / 16 steps (50%)
+**Completed:** 9 / 16 steps (56%)
 **In Progress:** 0 / 16 steps
-**Pending:** 8 / 16 steps
+**Pending:** 7 / 16 steps
 
 ---
 
@@ -83,15 +83,29 @@ Read plan/step_04_permission_service.md and implement Step 04: Permission servic
 
 ---
 
-### ⏳ Step 05: Basic HTMX UI Layout
-**Status:** ⏳ PENDING
+### ✅ Step 05: Basic HTMX UI Layout
+**Status:** ✅ COMPLETED
 **Duration:** 45 minutes
 **Dependencies:** Step 01
+**Completion Date:** 2025-11-22
+**Branch:** `claude/implement-htmx-ui-layout-01UGm1qxfqXKtxxAshcZqjnv`
 
 **Prompt to Paste:**
 ```
 Read plan/step_05_basic_ui_layout.md and implement Step 05: Basic HTMX UI layout with Tailwind CSS styling. Follow all instructions including the commit message format.
 ```
+
+**Implementation Summary:**
+- Tailwind CSS configuration with custom color scheme
+- Base layout templates (base.html, auth.html, app.html)
+- Reusable UI components (header, breadcrumb, toast, modal, loading)
+- Authentication pages (login, register) with HTMX forms
+- Dashboard page with empty state and storage usage display
+- Template rendering system with HTMX detection
+- Auth routes and handlers for login/register/logout
+- Responsive design with Tailwind CSS classes
+- Toast notification system with JavaScript
+- Comprehensive tests for templates and handlers
 
 ---
 
@@ -276,7 +290,7 @@ Read plan/step_16_documentation_deployment.md and implement Step 16: Documentati
 
 ### Sequential (One Agent)
 1. Complete Step 01 ✅
-2. Complete Steps 02 ✅, 03 ✅, 04 ✅, 05 ⏳ (any order)
+2. Complete Steps 02 ✅, 03 ✅, 04 ✅, 05 ✅ (any order)
 3. Complete Steps 06 ✅, 07 ✅, 08 ✅, 09 ✅ (any order)
 4. Complete Steps 10, 11, 12, 13 (any order)
 5. Complete Steps 14, 15, 16
@@ -290,7 +304,7 @@ Read plan/step_16_documentation_deployment.md and implement Step 16: Documentati
 - Agent 1: Step 02 ✅
 - Agent 2: Step 03 ✅
 - Agent 3: Step 04 ✅
-- Agent 4: Step 05 ⏳
+- Agent 4: Step 05 ✅
 
 **Round 3:** 4 agents in parallel (after Round 2 completes)
 - Agent 1: Step 06 ✅
@@ -315,20 +329,20 @@ Read plan/step_16_documentation_deployment.md and implement Step 16: Documentati
 ## Statistics
 
 ### By Status
-- **Completed:** 8 steps (50%)
+- **Completed:** 9 steps (56%)
 - **In Progress:** 0 steps (0%)
-- **Pending:** 8 steps (50%)
+- **Pending:** 7 steps (44%)
 
 ### By Group
 - **Group 1 (Foundation):** 1/1 completed (100%)
-- **Group 2 (Core Services):** 3/4 completed (75%)
+- **Group 2 (Core Services):** 4/4 completed (100%)
 - **Group 3 (Business Logic):** 4/4 completed (100%)
 - **Group 4 (Frontend):** 0/4 completed (0%)
 - **Group 5 (QA):** 0/3 completed (0%)
 
 ### Time Estimates
-- **Completed:** ~405 minutes (~6.75 hours)
-- **Remaining:** ~225 minutes (~3.75 hours)
+- **Completed:** ~450 minutes (~7.5 hours)
+- **Remaining:** ~180 minutes (~3 hours)
 - **Total:** ~630 minutes (~10.5 hours)
 
 ---
@@ -367,5 +381,5 @@ go test -race ./...              # No race conditions
 
 ---
 
-**Last Updated:** 2025-11-21
+**Last Updated:** 2025-11-22
 **Document Version:** 1.0
