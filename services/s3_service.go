@@ -3,6 +3,8 @@ package services
 import (
 	"errors"
 	"io"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -49,4 +51,26 @@ type S3Service interface {
 
 	// GetFileMetadata retrieves metadata about a file
 	GetFileMetadata(key string) (*FileMetadata, error)
+}
+
+// GenerateS3Key generates a unique S3 key for storing a file.
+// The key follows the pattern: users/{userID}/{fileID}/{filename}
+// The filename is sanitized to prevent path traversal attacks.
+func GenerateS3Key(userID, fileID, filename string) string {
+	// Sanitize filename to prevent path traversal
+	// Use only the base name to strip any directory components
+	sanitizedFilename := filepath.Base(filename)
+
+	// Remove any remaining path traversal attempts
+	sanitizedFilename = strings.ReplaceAll(sanitizedFilename, "..", "")
+	sanitizedFilename = strings.ReplaceAll(sanitizedFilename, "/", "")
+	sanitizedFilename = strings.ReplaceAll(sanitizedFilename, "\\", "")
+
+	// If sanitization results in empty string, use a default
+	if sanitizedFilename == "" || sanitizedFilename == "." {
+		sanitizedFilename = "file"
+	}
+
+	// Generate key in format: users/{userID}/{fileID}/{filename}
+	return "users/" + userID + "/" + fileID + "/" + sanitizedFilename
 }

@@ -17,14 +17,14 @@ func pointer(s string) *string {
 	return &s
 }
 
-// TestApp holds the test application context
-type TestApp struct {
+// ShareTestApp holds the test application context for share integration tests
+type ShareTestApp struct {
 	app    *pocketbase.PocketBase
 	tmpDir string
 }
 
 // setupIntegrationTest creates a test app for integration testing
-func setupIntegrationTest(t *testing.T) *TestApp {
+func setupIntegrationTest(t *testing.T) *ShareTestApp {
 	tmpDir, err := os.MkdirTemp("", "pb_integration_*")
 	require.NoError(t, err)
 
@@ -50,7 +50,7 @@ func setupIntegrationTest(t *testing.T) *TestApp {
 		t.Fatalf("Failed to create test collections: %v", err)
 	}
 
-	return &TestApp{
+	return &ShareTestApp{
 		app:    app,
 		tmpDir: tmpDir,
 	}
@@ -128,7 +128,7 @@ func createTestCollections(app *pocketbase.PocketBase) error {
 }
 
 // createTestUser creates a test user and returns the record
-func (ta *TestApp) createTestUser(t *testing.T) *core.Record {
+func (ta *ShareTestApp) createTestUser(t *testing.T) *core.Record {
 	collection, err := ta.app.FindCollectionByNameOrId("_users")
 	if err != nil {
 		t.Skip("users collection not found")
@@ -146,7 +146,7 @@ func (ta *TestApp) createTestUser(t *testing.T) *core.Record {
 }
 
 // createTestFile creates a test file
-func (ta *TestApp) createTestFile(t *testing.T, userID string) *core.Record {
+func (ta *ShareTestApp) createTestFile(t *testing.T, userID string) *core.Record {
 	collection, err := ta.app.FindCollectionByNameOrId("files")
 	if err != nil {
 		t.Skip("files collection not found")
