@@ -296,26 +296,32 @@ Examples:
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests with detailed summary (recommended)
 make test
 
-# Run with verbose output
-make test verbose
+# Run with verbose output (for debugging)
+make test-verbose
 
-# Run specific package
-make test packages=./services/...
-
-# Run specific test
-make test run=TestValidateFileAccess ./services/
-
-# Run with coverage
-make test coverage
+# Run unit tests only
+make test-unit
 
 # Run integration tests only
-make test tags=integration ./tests/integration/...
+make test-integration
 
-# Run security tests only
-make test ./tests/security/...
+# Run with coverage
+make test-coverage
+
+# Run specific package (use go test directly)
+go test -v ./services/...
+
+# Run specific test (use go test directly)
+go test -v -run TestValidateFileAccess ./services/...
+
+# Run security tests only (use go test directly)
+go test -v ./tests/security/...
+
+# Run with race detection
+make race
 ```
 
 ## Development Workflow
@@ -737,23 +743,23 @@ Document all endpoints with:
 # Run application in development mode
 go run main.go serve
 
-# Run all tests
+# Run all tests with detailed summary (recommended)
 make test
 
+# Run tests with verbose output (for debugging)
+make test-verbose
+
 # Run tests with coverage
-make test coverage
+make test-coverage
 
 # Run tests with race detection
-make test race
+make race
 
-# Generate coverage report
-make test coverage-report
-
-# Run specific test
-make test run=TestValidateFileAccess ./services/
+# Run specific test (use go test directly)
+go test -v -run TestValidateFileAccess ./services/...
 
 # Run benchmarks
-make test bench=.
+make benchmark
 
 # Format code
 make fmt
