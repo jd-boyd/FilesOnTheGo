@@ -1,0 +1,140 @@
+{{template "app.html" .}}
+
+{{define "title"}}{{if .CurrentDirectory}}{{.CurrentDirectory.Name}} - {{end}}Files - FilesOnTheGo{{end}}
+
+{{define "head"}}
+<!-- File Browser JavaScript -->
+<script src="/static/js/file-browser.js" defer></script>
+{{end}}
+
+{{define "page-header"}}
+<h1 class="text-2xl font-bold text-gray-900">
+    {{if .CurrentDirectory}}
+    {{.CurrentDirectory.Name}}
+    {{else}}
+    My Files
+    {{end}}
+</h1>
+{{end}}
+
+{{define "page-actions"}}
+<!-- Quick upload button for header -->
+<button type="button"
+        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+        onclick="openUploadModal()"
+        aria-label="Upload files">
+    <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+    </svg>
+    Upload
+</button>
+{{end}}
+
+{{define "app-content"}}
+<div id="main-content" class="file-browser" data-directory-id="{{.CurrentDirectoryID}}">
+    <!-- Storage Usage Card -->
+    <div class="bg-blue-50 border-b border-blue-200 px-4 py-3 sm:px-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                </svg>
+                <span class="text-sm font-medium text-blue-900">Storage:</span>
+                <span class="text-sm text-blue-700 ml-2">
+                    {{if .StorageUsed}}{{.StorageUsed}}{{else}}0 MB{{end}}
+                    / {{if .StorageQuota}}{{.StorageQuota}}{{else}}10 GB{{end}}
+                </span>
+            </div>
+            <!-- Progress Bar (compact) -->
+            <div class="w-32 bg-blue-200 rounded-full h-2 hidden sm:block">
+                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                     style="width: {{if .StoragePercent}}{{.StoragePercent}}%{{else}}5%{{end}}"
+                     aria-label="Storage usage: {{if .StoragePercent}}{{.StoragePercent}}%{{else}}5%{{end}}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Toolbar -->
+    {{template "file-actions.html" .}}
+
+    <!-- Drag & Drop Overlay -->
+    <div id="drag-drop-overlay"
+         class="fixed inset-0 bg-blue-500 bg-opacity-10 border-4 border-dashed border-blue-500 z-40 hidden flex items-center justify-center pointer-events-none">
+        <div class="bg-white rounded-lg shadow-lg p-8 text-center">
+            <svg class="mx-auto h-16 w-16 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <p class="text-xl font-medium text-blue-700">Drop files here to upload</p>
+        </div>
+    </div>
+
+    <!-- File List Container -->
+    <div id="file-list-wrapper"
+         hx-get="/api/directories/{{if .CurrentDirectoryID}}{{.CurrentDirectoryID}}{{else}}root{{end}}"
+         hx-trigger="load"
+         hx-target="#file-list-container"
+         hx-swap="innerHTML"
+         hx-indicator="#file-list-loading">
+
+        <!-- Initial Loading State -->
+        <div id="file-list-container" class="min-h-96">
+            <div class="flex justify-center items-center py-12" id="file-list-loading">
+                <div class="flex flex-col items-center">
+                    <svg class="animate-spin h-8 w-8 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-sm text-gray-500">Loading files...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    {{template "context-menu.html" .}}
+
+    <!-- File Details Modal -->
+    {{template "file-details-modal.html" .}}
+</div>
+
+<!-- Keyboard Shortcuts Help (hidden by default) -->
+<div id="keyboard-shortcuts-help"
+     class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 hidden z-40 max-w-sm">
+    <div class="flex items-center justify-between mb-3">
+        <h4 class="text-sm font-medium text-gray-900">Keyboard Shortcuts</h4>
+        <button type="button"
+                onclick="hideKeyboardShortcuts()"
+                class="text-gray-400 hover:text-gray-500">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+    <dl class="space-y-2 text-sm">
+        <div class="flex justify-between">
+            <dt class="text-gray-500"><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Del</kbd></dt>
+            <dd class="text-gray-700">Delete selected</dd>
+        </div>
+        <div class="flex justify-between">
+            <dt class="text-gray-500"><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">A</kbd></dt>
+            <dd class="text-gray-700">Select all</dd>
+        </div>
+        <div class="flex justify-between">
+            <dt class="text-gray-500"><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">N</kbd></dt>
+            <dd class="text-gray-700">New folder</dd>
+        </div>
+        <div class="flex justify-between">
+            <dt class="text-gray-500"><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Ctrl</kbd>+<kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">U</kbd></dt>
+            <dd class="text-gray-700">Upload files</dd>
+        </div>
+        <div class="flex justify-between">
+            <dt class="text-gray-500"><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">Esc</kbd></dt>
+            <dd class="text-gray-700">Close menus/modals</dd>
+        </div>
+        <div class="flex justify-between">
+            <dt class="text-gray-500"><kbd class="px-1.5 py-0.5 bg-gray-100 rounded text-xs">?</kbd></dt>
+            <dd class="text-gray-700">Show shortcuts</dd>
+        </div>
+    </dl>
+</div>
+{{end}}

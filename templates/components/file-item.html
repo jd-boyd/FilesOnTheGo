@@ -1,0 +1,200 @@
+<!-- File Item Component - List View -->
+<div class="file-item group grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-50 transition-colors duration-150 items-center"
+     data-id="{{.ID}}"
+     data-type="{{.Type}}"
+     data-name="{{.Name}}"
+     data-size="{{.Size}}"
+     data-mime-type="{{.MimeType}}"
+     role="listitem"
+     tabindex="0"
+     aria-label="{{.Name}}{{if eq .Type "directory"}} folder{{else}} file{{end}}"
+     oncontextmenu="showContextMenu(event, '{{.ID}}', '{{.Type}}')"
+     ondblclick="{{if eq .Type "directory"}}navigateToDirectory('{{.ID}}'){{else}}downloadFile('{{.ID}}'){{end}}">
+
+    <!-- Checkbox -->
+    <div class="col-span-1 flex items-center">
+        <input type="checkbox"
+               class="file-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+               data-id="{{.ID}}"
+               aria-label="Select {{.Name}}"
+               onclick="event.stopPropagation(); toggleFileSelection('{{.ID}}')">
+    </div>
+
+    <!-- Name and Icon -->
+    <div class="col-span-5 flex items-center min-w-0">
+        <!-- Icon -->
+        <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center mr-3">
+            {{if eq .Type "directory"}}
+            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            {{else}}
+            {{template "file-icon" .}}
+            {{end}}
+        </div>
+
+        <!-- Name (clickable) -->
+        {{if eq .Type "directory"}}
+        <a href="/files/{{.ID}}"
+           class="text-sm font-medium text-gray-900 hover:text-primary truncate"
+           hx-get="/api/directories/{{.ID}}"
+           hx-target="#file-list-container"
+           hx-push-url="/files/{{.ID}}"
+           onclick="event.stopPropagation()">
+            {{.Name}}
+        </a>
+        {{else}}
+        <span class="text-sm font-medium text-gray-900 truncate" title="{{.Name}}">
+            {{.Name}}
+        </span>
+        {{end}}
+    </div>
+
+    <!-- Size -->
+    <div class="col-span-2 text-sm text-gray-500">
+        {{if eq .Type "directory"}}
+        <span class="text-gray-400">--</span>
+        {{else}}
+        {{.SizeFormatted}}
+        {{end}}
+    </div>
+
+    <!-- Modified Date -->
+    <div class="col-span-3 text-sm text-gray-500">
+        <time datetime="{{.Updated}}" title="{{.Updated}}">
+            {{.UpdatedFormatted}}
+        </time>
+    </div>
+
+    <!-- Actions -->
+    <div class="col-span-1 flex items-center justify-end space-x-2">
+        {{if eq .Type "file"}}
+        <!-- Download Button -->
+        <a href="/api/files/{{.ID}}/download"
+           class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all"
+           title="Download"
+           aria-label="Download {{.Name}}"
+           onclick="event.stopPropagation()">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+        </a>
+        {{end}}
+
+        <!-- Context Menu Button -->
+        <button class="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all"
+                onclick="event.stopPropagation(); showContextMenu(event, '{{.ID}}', '{{.Type}}')"
+                aria-label="More options for {{.Name}}"
+                aria-haspopup="true">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Mobile View (shown on small screens) -->
+<div class="file-item-mobile sm:hidden flex items-center p-4 hover:bg-gray-50 border-b border-gray-100"
+     data-id="{{.ID}}"
+     data-type="{{.Type}}"
+     onclick="{{if eq .Type "directory"}}navigateToDirectory('{{.ID}}'){{else}}showMobileFileOptions('{{.ID}}', '{{.Type}}'){{end}}">
+
+    <!-- Checkbox -->
+    <input type="checkbox"
+           class="file-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary mr-3"
+           data-id="{{.ID}}"
+           onclick="event.stopPropagation(); toggleFileSelection('{{.ID}}')">
+
+    <!-- Icon -->
+    <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center mr-3">
+        {{if eq .Type "directory"}}
+        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+        </svg>
+        {{else}}
+        {{template "file-icon" .}}
+        {{end}}
+    </div>
+
+    <!-- File Info -->
+    <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 truncate">{{.Name}}</p>
+        <p class="text-xs text-gray-500 mt-1">
+            {{if eq .Type "file"}}{{.SizeFormatted}} &bull; {{end}}{{.UpdatedFormatted}}
+        </p>
+    </div>
+
+    <!-- Chevron -->
+    {{if eq .Type "directory"}}
+    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+    </svg>
+    {{end}}
+</div>
+
+<!-- File Icon Template -->
+{{define "file-icon"}}
+{{$ext := .Extension}}
+{{$mime := .MimeType}}
+
+{{/* Image files */}}
+{{if or (hasPrefix $mime "image/") (eq $ext ".png") (eq $ext ".jpg") (eq $ext ".jpeg") (eq $ext ".gif") (eq $ext ".svg") (eq $ext ".webp")}}
+<svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+</svg>
+
+{{/* PDF files */}}
+{{else if or (eq $mime "application/pdf") (eq $ext ".pdf")}}
+<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+</svg>
+
+{{/* Document files */}}
+{{else if or (eq $ext ".doc") (eq $ext ".docx") (hasPrefix $mime "application/msword") (hasPrefix $mime "application/vnd.openxmlformats-officedocument.wordprocessingml")}}
+<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+</svg>
+
+{{/* Spreadsheet files */}}
+{{else if or (eq $ext ".xls") (eq $ext ".xlsx") (eq $ext ".csv") (hasPrefix $mime "application/vnd.ms-excel") (hasPrefix $mime "application/vnd.openxmlformats-officedocument.spreadsheetml")}}
+<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+</svg>
+
+{{/* Presentation files */}}
+{{else if or (eq $ext ".ppt") (eq $ext ".pptx") (hasPrefix $mime "application/vnd.ms-powerpoint") (hasPrefix $mime "application/vnd.openxmlformats-officedocument.presentationml")}}
+<svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+</svg>
+
+{{/* Archive files */}}
+{{else if or (eq $ext ".zip") (eq $ext ".tar") (eq $ext ".gz") (eq $ext ".rar") (eq $ext ".7z") (hasPrefix $mime "application/zip") (hasPrefix $mime "application/x-tar")}}
+<svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+</svg>
+
+{{/* Video files */}}
+{{else if or (hasPrefix $mime "video/") (eq $ext ".mp4") (eq $ext ".mov") (eq $ext ".avi") (eq $ext ".mkv") (eq $ext ".webm")}}
+<svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+</svg>
+
+{{/* Audio files */}}
+{{else if or (hasPrefix $mime "audio/") (eq $ext ".mp3") (eq $ext ".wav") (eq $ext ".ogg") (eq $ext ".flac") (eq $ext ".aac")}}
+<svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+</svg>
+
+{{/* Code/text files */}}
+{{else if or (hasPrefix $mime "text/") (eq $ext ".json") (eq $ext ".xml") (eq $ext ".yaml") (eq $ext ".yml") (eq $ext ".md") (eq $ext ".js") (eq $ext ".ts") (eq $ext ".py") (eq $ext ".go") (eq $ext ".html") (eq $ext ".css")}}
+<svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+</svg>
+
+{{/* Default file icon */}}
+{{else}}
+<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+</svg>
+{{end}}
+{{end}}
