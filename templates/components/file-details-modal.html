@@ -1,0 +1,182 @@
+<!-- File Details Modal Component -->
+<div id="file-details-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="file-details-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeFileDetailsModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <!-- Header -->
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center">
+                        <!-- Icon -->
+                        <div id="details-icon" class="flex-shrink-0 w-12 h-12 flex items-center justify-center mr-4">
+                            <!-- Icon will be set dynamically -->
+                        </div>
+                        <div>
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="file-details-modal-title">
+                                <span id="details-name">File Name</span>
+                            </h3>
+                            <p class="text-sm text-gray-500" id="details-type-label">File</p>
+                        </div>
+                    </div>
+                    <button type="button"
+                            onclick="closeFileDetailsModal()"
+                            class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Details List -->
+                <dl class="divide-y divide-gray-200">
+                    <!-- Size -->
+                    <div id="details-size-row" class="py-3 flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Size</dt>
+                        <dd class="text-sm text-gray-900" id="details-size">--</dd>
+                    </div>
+
+                    <!-- Type / MIME -->
+                    <div class="py-3 flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Type</dt>
+                        <dd class="text-sm text-gray-900" id="details-mime-type">--</dd>
+                    </div>
+
+                    <!-- Location / Path -->
+                    <div class="py-3 flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Location</dt>
+                        <dd class="text-sm text-gray-900 truncate max-w-xs" id="details-path" title="">--</dd>
+                    </div>
+
+                    <!-- Created -->
+                    <div class="py-3 flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Created</dt>
+                        <dd class="text-sm text-gray-900" id="details-created">--</dd>
+                    </div>
+
+                    <!-- Modified -->
+                    <div class="py-3 flex justify-between">
+                        <dt class="text-sm font-medium text-gray-500">Modified</dt>
+                        <dd class="text-sm text-gray-900" id="details-modified">--</dd>
+                    </div>
+
+                    <!-- Owner (if applicable) -->
+                    <div id="details-owner-row" class="py-3 flex justify-between hidden">
+                        <dt class="text-sm font-medium text-gray-500">Owner</dt>
+                        <dd class="text-sm text-gray-900" id="details-owner">--</dd>
+                    </div>
+
+                    <!-- Checksum (for files only) -->
+                    <div id="details-checksum-row" class="py-3 hidden">
+                        <dt class="text-sm font-medium text-gray-500 mb-1">Checksum (SHA-256)</dt>
+                        <dd class="text-xs font-mono text-gray-600 bg-gray-50 p-2 rounded break-all" id="details-checksum">--</dd>
+                    </div>
+
+                    <!-- Share Links -->
+                    <div id="details-shares-row" class="py-3 hidden">
+                        <dt class="text-sm font-medium text-gray-500 mb-2">Active Share Links</dt>
+                        <dd id="details-shares" class="space-y-2">
+                            <!-- Share links will be listed here -->
+                        </dd>
+                    </div>
+                </dl>
+
+                <!-- Preview (for images) -->
+                <div id="details-preview-container" class="mt-4 hidden">
+                    <p class="text-sm font-medium text-gray-500 mb-2">Preview</p>
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <img id="details-preview-image"
+                             src=""
+                             alt="Preview"
+                             class="max-w-full max-h-64 mx-auto object-contain">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 flex flex-wrap gap-2 justify-end">
+                <!-- Download (files only) -->
+                <a id="details-download-btn"
+                   href="#"
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download
+                </a>
+
+                <!-- Open (directories only) -->
+                <button id="details-open-btn"
+                        type="button"
+                        onclick="openDirectoryFromDetails()"
+                        class="hidden inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                    </svg>
+                    Open
+                </button>
+
+                <!-- Share -->
+                <button type="button"
+                        onclick="shareFromDetails()"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <svg class="h-4 w-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+                    </svg>
+                    Share
+                </button>
+
+                <!-- Close -->
+                <button type="button"
+                        onclick="closeFileDetailsModal()"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    Close
+                </button>
+            </div>
+
+            <!-- Hidden fields for current item data -->
+            <input type="hidden" id="details-item-id">
+            <input type="hidden" id="details-item-type">
+        </div>
+    </div>
+</div>
+
+<!-- Share Link Item Template (used dynamically) -->
+<template id="share-link-template">
+    <div class="flex items-center justify-between bg-gray-50 rounded-md p-2">
+        <div class="flex-1 min-w-0 mr-2">
+            <p class="text-xs font-mono text-gray-600 truncate share-link-url"></p>
+            <p class="text-xs text-gray-500 mt-1">
+                <span class="share-link-permission"></span>
+                <span class="share-link-expiry"></span>
+            </p>
+        </div>
+        <div class="flex items-center space-x-1">
+            <button type="button"
+                    class="p-1.5 text-gray-500 hover:text-primary rounded-md hover:bg-gray-100"
+                    onclick="copyShareLink(this)"
+                    title="Copy link">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+            </button>
+            <button type="button"
+                    class="p-1.5 text-red-500 hover:text-red-700 rounded-md hover:bg-red-50"
+                    onclick="revokeShareLink(this)"
+                    title="Revoke link">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</template>

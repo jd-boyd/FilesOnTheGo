@@ -1,0 +1,357 @@
+<!-- File Actions Toolbar Component -->
+<div class="file-actions bg-white border-b border-gray-200 px-4 py-3">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <!-- Left Side: Primary Actions -->
+        <div class="flex items-center space-x-3">
+            <!-- Upload Button -->
+            <button type="button"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    onclick="openUploadModal()"
+                    aria-label="Upload files">
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Upload
+            </button>
+
+            <!-- New Folder Button -->
+            <button type="button"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    onclick="openNewFolderModal()"
+                    aria-label="Create new folder">
+                <svg class="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                </svg>
+                <span class="hidden sm:inline">New Folder</span>
+                <span class="sm:hidden">Folder</span>
+            </button>
+
+            <!-- Batch Actions (shown when files selected) -->
+            <div id="batch-actions" class="hidden items-center space-x-2 border-l border-gray-200 pl-3 ml-3">
+                <span class="text-sm text-gray-600">
+                    <span id="selected-count">0</span> selected
+                </span>
+                <button type="button"
+                        class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        onclick="downloadSelected()"
+                        aria-label="Download selected files">
+                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download
+                </button>
+                <button type="button"
+                        class="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        onclick="deleteSelected()"
+                        aria-label="Delete selected files">
+                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete
+                </button>
+                <button type="button"
+                        class="text-sm text-gray-500 hover:text-gray-700"
+                        onclick="clearSelection()"
+                        aria-label="Clear selection">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Side: View Options, Sort, Search -->
+        <div class="flex items-center space-x-3">
+            <!-- Search Box -->
+            <div class="relative">
+                <input type="search"
+                       id="file-search"
+                       name="search"
+                       placeholder="Search files..."
+                       class="block w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-primary focus:border-primary"
+                       hx-get="/api/files/search"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-target="#file-list-container"
+                       hx-include="[name='directory_id']"
+                       aria-label="Search files">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <!-- Clear search button -->
+                <button type="button"
+                        id="clear-search"
+                        class="hidden absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onclick="clearSearch()"
+                        aria-label="Clear search">
+                    <svg class="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Hidden input for current directory -->
+            <input type="hidden" name="directory_id" value="{{.CurrentDirectoryID}}">
+
+            <!-- Sort Dropdown -->
+            <div class="relative" x-data="{ open: false }">
+                <button type="button"
+                        @click="open = !open"
+                        @click.away="open = false"
+                        class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        aria-haspopup="true"
+                        :aria-expanded="open">
+                    <svg class="h-5 w-5 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+                    </svg>
+                    <span class="hidden sm:inline">Sort</span>
+                    <svg class="ml-1 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div x-show="open"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="transform opacity-0 scale-95"
+                     x-transition:enter-end="transform opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="transform opacity-100 scale-100"
+                     x-transition:leave-end="transform opacity-0 scale-95"
+                     class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                     role="menu"
+                     aria-orientation="vertical">
+                    <div class="py-1">
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{if eq .SortBy "name"}}bg-gray-50{{end}}"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=name&order=asc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Name (A-Z)
+                        </a>
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=name&order=desc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Name (Z-A)
+                        </a>
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{if eq .SortBy "date"}}bg-gray-50{{end}}"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=date&order=desc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Date (Newest)
+                        </a>
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=date&order=asc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Date (Oldest)
+                        </a>
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{if eq .SortBy "size"}}bg-gray-50{{end}}"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=size&order=desc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Size (Largest)
+                        </a>
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=size&order=asc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Size (Smallest)
+                        </a>
+                        <a href="#"
+                           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 {{if eq .SortBy "type"}}bg-gray-50{{end}}"
+                           role="menuitem"
+                           hx-get="/api/files?directory_id={{.CurrentDirectoryID}}&sort=type&order=asc"
+                           hx-target="#file-list-container"
+                           @click="open = false">
+                            Type
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="flex items-center border border-gray-300 rounded-md overflow-hidden">
+                <button type="button"
+                        id="view-list-btn"
+                        class="p-2 {{if ne .ViewMode "grid"}}bg-gray-100 text-gray-700{{else}}text-gray-500 hover:bg-gray-50{{end}}"
+                        onclick="setViewMode('list')"
+                        aria-label="List view"
+                        aria-pressed="{{if ne .ViewMode "grid"}}true{{else}}false{{end}}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <button type="button"
+                        id="view-grid-btn"
+                        class="p-2 {{if eq .ViewMode "grid"}}bg-gray-100 text-gray-700{{else}}text-gray-500 hover:bg-gray-50{{end}}"
+                        onclick="setViewMode('grid')"
+                        aria-label="Grid view"
+                        aria-pressed="{{if eq .ViewMode "grid"}}true{{else}}false{{end}}">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Folder Modal -->
+<div id="new-folder-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="new-folder-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeNewFolderModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form hx-post="/api/directories"
+                  hx-target="#file-list-container"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) closeNewFolderModal()">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="new-folder-modal-title">
+                                Create New Folder
+                            </h3>
+                            <div class="mt-4">
+                                <label for="folder-name" class="block text-sm font-medium text-gray-700">
+                                    Folder name
+                                </label>
+                                <input type="text"
+                                       name="name"
+                                       id="folder-name"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                       placeholder="New Folder"
+                                       required
+                                       autofocus>
+                                <input type="hidden" name="parent_directory" value="{{.CurrentDirectoryID}}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm">
+                        Create
+                    </button>
+                    <button type="button"
+                            onclick="closeNewFolderModal()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div id="upload-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="upload-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeUploadModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="flex items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="upload-modal-title">
+                            Upload Files
+                        </h3>
+                        <div class="mt-4">
+                            <!-- Drop Zone -->
+                            <div id="drop-zone"
+                                 class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer"
+                                 ondrop="handleDrop(event)"
+                                 ondragover="handleDragOver(event)"
+                                 ondragleave="handleDragLeave(event)"
+                                 onclick="document.getElementById('file-input').click()">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    Drop files here or <span class="text-primary font-medium">browse</span>
+                                </p>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Maximum file size: 100MB
+                                </p>
+                            </div>
+
+                            <input type="file"
+                                   id="file-input"
+                                   class="hidden"
+                                   multiple
+                                   onchange="handleFileSelect(event)">
+
+                            <!-- File List -->
+                            <div id="upload-file-list" class="mt-4 space-y-2 max-h-48 overflow-y-auto hidden">
+                                <!-- Files will be added here dynamically -->
+                            </div>
+
+                            <!-- Progress -->
+                            <div id="upload-progress" class="mt-4 hidden">
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span>Uploading...</span>
+                                    <span id="upload-percent">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div id="upload-progress-bar" class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button"
+                        id="upload-btn"
+                        onclick="startUpload()"
+                        disabled
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    Upload
+                </button>
+                <button type="button"
+                        onclick="closeUploadModal()"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

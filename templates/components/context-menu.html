@@ -1,0 +1,402 @@
+<!-- Context Menu Component -->
+<!-- This menu is positioned dynamically via JavaScript -->
+<div id="context-menu"
+     class="fixed z-50 hidden bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-48"
+     role="menu"
+     aria-orientation="vertical"
+     aria-labelledby="context-menu-button">
+
+    <!-- File-specific options (hidden for directories) -->
+    <div id="context-menu-file-options">
+        <!-- Download -->
+        <a id="context-menu-download"
+           href="#"
+           class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+           role="menuitem"
+           onclick="contextMenuAction('download')">
+            <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            Download
+        </a>
+    </div>
+
+    <!-- Directory-specific options (hidden for files) -->
+    <div id="context-menu-directory-options">
+        <!-- Open -->
+        <a id="context-menu-open"
+           href="#"
+           class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+           role="menuitem"
+           onclick="contextMenuAction('open')">
+            <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            Open
+        </a>
+    </div>
+
+    <!-- Divider -->
+    <div class="border-t border-gray-100 my-1"></div>
+
+    <!-- Share -->
+    <a id="context-menu-share"
+       href="#"
+       class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+       role="menuitem"
+       onclick="contextMenuAction('share')">
+        <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+        </svg>
+        Share
+    </a>
+
+    <!-- Rename -->
+    <a id="context-menu-rename"
+       href="#"
+       class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+       role="menuitem"
+       onclick="contextMenuAction('rename')">
+        <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+        </svg>
+        Rename
+    </a>
+
+    <!-- Move -->
+    <a id="context-menu-move"
+       href="#"
+       class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+       role="menuitem"
+       onclick="contextMenuAction('move')">
+        <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+        </svg>
+        Move to...
+    </a>
+
+    <!-- Copy Link (for files) -->
+    <a id="context-menu-copy-link"
+       href="#"
+       class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+       role="menuitem"
+       onclick="contextMenuAction('copy-link')">
+        <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+        </svg>
+        Copy Link
+    </a>
+
+    <!-- Divider -->
+    <div class="border-t border-gray-100 my-1"></div>
+
+    <!-- Properties/Details -->
+    <a id="context-menu-details"
+       href="#"
+       class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+       role="menuitem"
+       onclick="contextMenuAction('details')">
+        <svg class="h-5 w-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Properties
+    </a>
+
+    <!-- Divider -->
+    <div class="border-t border-gray-100 my-1"></div>
+
+    <!-- Delete (danger zone) -->
+    <a id="context-menu-delete"
+       href="#"
+       class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+       role="menuitem"
+       onclick="contextMenuAction('delete')">
+        <svg class="h-5 w-5 mr-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+        Delete
+    </a>
+</div>
+
+<!-- Rename Modal -->
+<div id="rename-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="rename-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeRenameModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="rename-form"
+                  hx-target="#file-list-container"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) closeRenameModal()">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="rename-modal-title">
+                                Rename
+                            </h3>
+                            <div class="mt-4">
+                                <label for="rename-input" class="block text-sm font-medium text-gray-700">
+                                    New name
+                                </label>
+                                <input type="text"
+                                       name="name"
+                                       id="rename-input"
+                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                       required>
+                                <input type="hidden" name="id" id="rename-id">
+                                <input type="hidden" name="type" id="rename-type">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm">
+                        Rename
+                    </button>
+                    <button type="button"
+                            onclick="closeRenameModal()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="delete-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeDeleteModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="delete-modal-title">
+                            Delete <span id="delete-item-type">item</span>
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">
+                                Are you sure you want to delete <strong id="delete-item-name">this item</strong>?
+                                This action cannot be undone.
+                            </p>
+                            <p id="delete-directory-warning" class="mt-2 text-sm text-red-600 hidden">
+                                Warning: This will also delete all files and subfolders inside this folder.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button"
+                        id="delete-confirm-btn"
+                        onclick="confirmDelete()"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Delete
+                </button>
+                <button type="button"
+                        onclick="closeDeleteModal()"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+            <input type="hidden" id="delete-item-id">
+            <input type="hidden" id="delete-item-type-value">
+        </div>
+    </div>
+</div>
+
+<!-- Move Modal -->
+<div id="move-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="move-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeMoveModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="flex items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="move-modal-title">
+                            Move to
+                        </h3>
+                        <div class="mt-4">
+                            <p class="text-sm text-gray-500 mb-3">
+                                Select destination folder for <strong id="move-item-name">this item</strong>
+                            </p>
+                            <!-- Directory tree will be loaded here -->
+                            <div id="move-directory-tree"
+                                 class="border border-gray-200 rounded-md max-h-64 overflow-y-auto p-2"
+                                 hx-get="/api/directories/tree"
+                                 hx-trigger="revealed">
+                                <div class="flex justify-center py-4">
+                                    <svg class="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <input type="hidden" id="move-item-id">
+                            <input type="hidden" id="move-item-type">
+                            <input type="hidden" id="move-target-id">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button"
+                        id="move-confirm-btn"
+                        onclick="confirmMove()"
+                        disabled
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    Move Here
+                </button>
+                <button type="button"
+                        onclick="closeMoveModal()"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="share-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="share-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeShareModal()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="share-form"
+                  hx-post="/api/shares"
+                  hx-swap="innerHTML"
+                  hx-target="#share-result">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="share-modal-title">
+                                Share <span id="share-item-name">item</span>
+                            </h3>
+                            <div class="mt-4 space-y-4">
+                                <!-- Permission Level -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Permission
+                                    </label>
+                                    <div class="space-y-2">
+                                        <label class="inline-flex items-center">
+                                            <input type="radio" name="permission" value="read" checked class="h-4 w-4 text-primary border-gray-300 focus:ring-primary">
+                                            <span class="ml-2 text-sm text-gray-700">View only</span>
+                                        </label>
+                                        <label class="inline-flex items-center ml-6">
+                                            <input type="radio" name="permission" value="read_write" class="h-4 w-4 text-primary border-gray-300 focus:ring-primary">
+                                            <span class="ml-2 text-sm text-gray-700">Can edit</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Expiration -->
+                                <div>
+                                    <label for="share-expiry" class="block text-sm font-medium text-gray-700">
+                                        Expires (optional)
+                                    </label>
+                                    <select name="expires_in"
+                                            id="share-expiry"
+                                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                                        <option value="">Never</option>
+                                        <option value="1h">1 hour</option>
+                                        <option value="24h">24 hours</option>
+                                        <option value="7d" selected>7 days</option>
+                                        <option value="30d">30 days</option>
+                                    </select>
+                                </div>
+
+                                <!-- Password Protection -->
+                                <div>
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" id="share-password-toggle" class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary" onchange="toggleSharePassword()">
+                                        <span class="ml-2 text-sm text-gray-700">Password protect</span>
+                                    </label>
+                                    <input type="password"
+                                           name="password"
+                                           id="share-password"
+                                           placeholder="Enter password"
+                                           class="mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm hidden">
+                                </div>
+
+                                <input type="hidden" name="file_id" id="share-file-id">
+                                <input type="hidden" name="directory_id" id="share-directory-id">
+
+                                <!-- Result area -->
+                                <div id="share-result"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:ml-3 sm:w-auto sm:text-sm">
+                        Create Link
+                    </button>
+                    <button type="button"
+                            onclick="closeShareModal()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
