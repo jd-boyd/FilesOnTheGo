@@ -1,0 +1,182 @@
+<!-- Upload Modal Component -->
+<!-- Full-featured upload dialog with drag-and-drop, progress, and multi-file support -->
+<div id="upload-modal"
+     class="fixed z-50 inset-0 overflow-y-auto hidden"
+     aria-labelledby="upload-modal-title"
+     role="dialog"
+     aria-modal="true">
+
+    <!-- Background overlay -->
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity"
+             onclick="closeUploadModal()"
+             aria-hidden="true"></div>
+
+        <!-- Center vertically -->
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+             role="document">
+
+            <!-- Header -->
+            <div class="bg-white px-4 py-4 sm:px-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
+                            <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-lg leading-6 font-semibold text-gray-900" id="upload-modal-title">
+                                Upload Files
+                            </h3>
+                            <p class="text-sm text-gray-500" id="upload-modal-subtitle">
+                                {{if .CurrentDirectory}}to {{.CurrentDirectory.Name}}{{else}}to My Files{{end}}
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button"
+                            class="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                            onclick="closeUploadModal()"
+                            aria-label="Close upload dialog">
+                        <span class="sr-only">Close</span>
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="bg-white px-4 py-5 sm:p-6">
+                <!-- Drop Zone -->
+                <div id="modal-drop-zone"
+                     class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-all duration-200 cursor-pointer hover:border-primary hover:bg-blue-50"
+                     ondrop="handleDrop(event)"
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)"
+                     onclick="document.getElementById('modal-file-input').click()"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Drop files here or click to browse">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="mt-3 text-sm font-medium text-gray-700">
+                        Drop files here or <span class="text-primary">browse</span>
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Max 5 GB per file
+                    </p>
+                </div>
+
+                <!-- Hidden file input -->
+                <input type="file"
+                       id="modal-file-input"
+                       class="hidden"
+                       multiple
+                       onchange="handleFileSelect(event)">
+
+                <!-- Hidden directory input -->
+                <input type="hidden"
+                       id="modal-directory-id"
+                       value="{{.CurrentDirectoryID}}">
+
+                <!-- File List -->
+                <div id="upload-file-list" class="mt-4 space-y-2 max-h-64 overflow-y-auto hidden">
+                    <!-- Files will be added here dynamically -->
+                </div>
+
+                <!-- Error messages container -->
+                <div id="upload-errors" class="mt-4">
+                    <!-- Error messages will be inserted here -->
+                </div>
+
+                <!-- Overall Progress -->
+                <div id="upload-progress" class="mt-4 hidden">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-medium text-gray-700">
+                            Uploading <span id="upload-current">0</span> of <span id="upload-total">0</span> files
+                        </span>
+                        <span id="upload-percent" class="text-sm font-medium text-primary">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="upload-progress-bar"
+                             class="bg-primary h-2.5 rounded-full transition-all duration-300"
+                             style="width: 0%"
+                             role="progressbar"
+                             aria-valuenow="0"
+                             aria-valuemin="0"
+                             aria-valuemax="100"></div>
+                    </div>
+                    <div class="mt-1 flex justify-between text-xs text-gray-500">
+                        <span id="upload-status">Preparing...</span>
+                        <button type="button"
+                                id="cancel-all-btn"
+                                class="text-red-600 hover:text-red-800"
+                                onclick="cancelAllUploads()">
+                            Cancel All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-between">
+                <!-- Upload restrictions info -->
+                <div class="mt-3 sm:mt-0 text-xs text-gray-500">
+                    <p>Supported: All file types</p>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button type="button"
+                            onclick="closeUploadModal()"
+                            class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:text-sm">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            id="upload-btn"
+                            onclick="startUpload()"
+                            disabled
+                            class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        Upload
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Dragover state for modal drop zone */
+    #modal-drop-zone.dragover {
+        border-color: #3B82F6;
+        background-color: #EFF6FF;
+    }
+
+    #modal-drop-zone.dragover svg {
+        color: #3B82F6;
+    }
+
+    /* Animation for modal */
+    #upload-modal > div > div:last-child {
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
