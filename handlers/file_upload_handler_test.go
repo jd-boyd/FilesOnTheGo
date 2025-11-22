@@ -426,7 +426,7 @@ func TestModels_SanitizeFilename(t *testing.T) {
 		{"Path traversal", "../../../etc/passwd", "passwd", false},
 		{"Windows path", "C:\\Users\\file.txt", "file.txt", false},
 		{"Null byte", "file\x00.txt", "", true},
-		{"Control characters", "file\n.txt", "file.txt", false},
+		{"Control characters", "file\n.txt", "", true},
 		{"Just dots", "..", "", true},
 		{"Empty", "", "", true},
 		{"Very long name", strings.Repeat("a", 300), "", true},

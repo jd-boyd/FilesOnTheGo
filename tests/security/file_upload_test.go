@@ -98,18 +98,10 @@ func TestSecurity_ControlCharacterInjection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sanitized, err := models.SanitizeFilename(tt.filename)
+			_, err := models.SanitizeFilename(tt.filename)
 
-			// Should either reject or sanitize
-			if err == nil {
-				// Verify control characters were removed
-				for _, r := range sanitized {
-					assert.False(t, r < 32 || r == 127, "Should not contain control characters")
-				}
-			} else {
-				// Error is also acceptable
-				assert.Error(t, err)
-			}
+			// Control characters should be rejected with an error
+			assert.Error(t, err, "Should reject filename with control characters")
 		})
 	}
 }
