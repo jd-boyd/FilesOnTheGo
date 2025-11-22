@@ -1,6 +1,6 @@
 {{template "app.html" .}}
 
-{{define "title"}}My Shares - FilesOnTheGo{{end}}
+{{define "title"}}Manage Shares - FilesOnTheGo{{end}}
 
 {{define "head"}}
 <!-- Share Management JavaScript -->
@@ -8,372 +8,174 @@
 {{end}}
 
 {{define "page-header"}}
-<h1 class="text-2xl font-bold text-gray-900">My Shares</h1>
+<h1 class="text-2xl font-bold text-gray-900">Manage Shares</h1>
 {{end}}
 
 {{define "page-actions"}}
-<!-- No specific actions for share management page -->
+<!-- Empty for now -->
 {{end}}
 
 {{define "app-content"}}
-<div id="shares-page" class="max-w-6xl mx-auto">
-    <!-- Overview Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <!-- Total Shares -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 p-3 rounded-full bg-blue-100">
-                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-                    </svg>
+<div class="max-w-6xl mx-auto">
+    <!-- Share Statistics -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-4">
+                <!-- Total Shares -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Shares</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900" id="stat-total-shares">
+                        {{if .TotalShares}}{{.TotalShares}}{{else}}0{{end}}
+                    </dd>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Shares</p>
-                    <p class="text-2xl font-semibold text-gray-900" id="stat-total-shares">--</p>
+                <!-- Active Shares -->
+                <div class="bg-green-50 rounded-lg p-4">
+                    <dt class="text-sm font-medium text-green-600 truncate">Active</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-green-700" id="stat-active-shares">
+                        {{if .ActiveShares}}{{.ActiveShares}}{{else}}0{{end}}
+                    </dd>
                 </div>
-            </div>
-        </div>
-
-        <!-- Active Shares -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 p-3 rounded-full bg-green-100">
-                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+                <!-- Expired Shares -->
+                <div class="bg-red-50 rounded-lg p-4">
+                    <dt class="text-sm font-medium text-red-600 truncate">Expired</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-red-700" id="stat-expired-shares">
+                        {{if .ExpiredShares}}{{.ExpiredShares}}{{else}}0{{end}}
+                    </dd>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Active</p>
-                    <p class="text-2xl font-semibold text-gray-900" id="stat-active-shares">--</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Expired Shares -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 p-3 rounded-full bg-red-100">
-                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Expired</p>
-                    <p class="text-2xl font-semibold text-gray-900" id="stat-expired-shares">--</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Accesses -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 p-3 rounded-full bg-purple-100">
-                    <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Views</p>
-                    <p class="text-2xl font-semibold text-gray-900" id="stat-total-accesses">--</p>
+                <!-- Total Views -->
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <dt class="text-sm font-medium text-blue-600 truncate">Total Views</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-blue-700" id="stat-total-views">
+                        {{if .TotalViews}}{{.TotalViews}}{{else}}0{{end}}
+                    </dd>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter & Search Bar -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div class="p-4">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <!-- Filters -->
-                <div class="flex flex-wrap items-center gap-3">
-                    <!-- Resource Type Filter -->
-                    <div class="flex items-center space-x-2">
-                        <label for="filter-type" class="text-sm font-medium text-gray-700">Type:</label>
-                        <select id="filter-type"
-                                onchange="filterShares()"
-                                class="block border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm">
-                            <option value="">All</option>
-                            <option value="file">Files</option>
-                            <option value="directory">Folders</option>
-                        </select>
-                    </div>
+    <!-- Filters and Actions Bar -->
+    <div class="bg-white shadow rounded-lg mb-6">
+        <div class="px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Resource Type Filter -->
+                <div class="flex items-center">
+                    <label for="filter-resource-type" class="sr-only">Filter by type</label>
+                    <select id="filter-resource-type"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                            onchange="filterShares()">
+                        <option value="">All types</option>
+                        <option value="file">Files only</option>
+                        <option value="directory">Folders only</option>
+                    </select>
+                </div>
 
-                    <!-- Status Filter -->
-                    <div class="flex items-center space-x-2">
-                        <label for="filter-status" class="text-sm font-medium text-gray-700">Status:</label>
-                        <select id="filter-status"
-                                onchange="filterShares()"
-                                class="block border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm">
-                            <option value="">All</option>
-                            <option value="active">Active</option>
-                            <option value="expired">Expired</option>
-                        </select>
-                    </div>
-
-                    <!-- Sort -->
-                    <div class="flex items-center space-x-2">
-                        <label for="sort-by" class="text-sm font-medium text-gray-700">Sort:</label>
-                        <select id="sort-by"
-                                onchange="sortShares()"
-                                class="block border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm">
-                            <option value="-created">Newest First</option>
-                            <option value="created">Oldest First</option>
-                            <option value="-access_count">Most Accessed</option>
-                            <option value="expires_at">Expiring Soon</option>
-                        </select>
-                    </div>
+                <!-- Status Filter -->
+                <div class="flex items-center">
+                    <label for="filter-status" class="sr-only">Filter by status</label>
+                    <select id="filter-status"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                            onchange="filterShares()">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                        <option value="protected">Password protected</option>
+                    </select>
                 </div>
 
                 <!-- Search -->
-                <div class="flex-1 max-w-xs">
-                    <div class="relative">
-                        <input type="text"
-                               id="share-search"
-                               placeholder="Search shares..."
-                               oninput="searchShares(this.value)"
-                               class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
+                <div class="relative flex-1 min-w-48">
+                    <label for="search-shares" class="sr-only">Search shares</label>
+                    <input type="text"
+                           id="search-shares"
+                           placeholder="Search by name..."
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm pl-9"
+                           oninput="searchShares(this.value)">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
                     </div>
                 </div>
+            </div>
 
-                <!-- Bulk Actions -->
-                <div id="bulk-actions" class="hidden">
+            <!-- Sort -->
+            <div class="flex items-center gap-3">
+                <label for="sort-shares" class="text-sm text-gray-500">Sort by:</label>
+                <select id="sort-shares"
+                        class="block rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                        onchange="sortShares()">
+                    <option value="created_desc">Newest first</option>
+                    <option value="created_asc">Oldest first</option>
+                    <option value="access_desc">Most accessed</option>
+                    <option value="expires_asc">Expiring soon</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <!-- Bulk Actions (shown when items selected) -->
+            <div id="bulk-actions" class="hidden mb-4 p-3 bg-blue-50 rounded-lg flex items-center justify-between">
+                <span class="text-sm text-blue-700">
+                    <span id="selected-count">0</span> share(s) selected
+                </span>
+                <div class="flex items-center gap-2">
                     <button type="button"
-                            onclick="bulkRevokeShares()"
-                            class="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                        <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            onclick="revokeSelectedShares()"
+                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-400">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
                         Revoke Selected
                     </button>
+                    <button type="button"
+                            onclick="clearShareSelection()"
+                            class="text-sm text-gray-500 hover:text-gray-700">
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Shares List Container -->
+            <div id="shares-list-container"
+                 hx-get="/api/shares/list-htmx"
+                 hx-trigger="load"
+                 hx-swap="innerHTML"
+                 hx-indicator="#shares-loading">
+                <!-- Loading State -->
+                <div class="flex justify-center items-center py-12" id="shares-loading">
+                    <div class="flex flex-col items-center">
+                        <svg class="animate-spin h-8 w-8 text-primary mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm text-gray-500">Loading shares...</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Shares List -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <!-- Header with bulk select -->
-        <div class="border-b border-gray-200 px-4 py-3 flex items-center">
-            <label class="flex items-center">
-                <input type="checkbox"
-                       id="select-all-shares"
-                       onchange="toggleSelectAllShares(this.checked)"
-                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
-                <span class="ml-2 text-sm text-gray-600">Select all</span>
-            </label>
-            <span id="selected-shares-count" class="ml-4 text-sm text-gray-500 hidden">
-                (<span id="selected-count">0</span> selected)
-            </span>
-        </div>
-
-        <!-- Shares Container -->
-        <div id="shares-list"
-             hx-get="/api/shares"
-             hx-trigger="load"
-             hx-target="#shares-list-content"
-             hx-swap="innerHTML"
-             hx-indicator="#shares-loading">
-
-            <!-- Loading State -->
-            <div id="shares-loading" class="flex justify-center items-center py-12">
-                <div class="flex flex-col items-center">
-                    <svg class="animate-spin h-8 w-8 text-primary mb-2" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span class="text-sm text-gray-500">Loading shares...</span>
-                </div>
-            </div>
-
-            <!-- Content will be loaded here -->
-            <div id="shares-list-content" class="divide-y divide-gray-200"></div>
-        </div>
-
-        <!-- Empty State (shown when no shares) -->
-        <div id="shares-empty" class="hidden text-center py-12">
-            <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Empty State (shown when no shares) -->
+    <div id="empty-shares-state" class="hidden">
+        <div class="text-center py-12">
+            <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
             </svg>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No shares yet</h3>
-            <p class="text-gray-500 mb-4">
-                Create share links to allow others to access your files and folders.
+            <h3 class="mt-4 text-lg font-medium text-gray-900">No shares yet</h3>
+            <p class="mt-2 text-sm text-gray-500 max-w-sm mx-auto">
+                You haven't created any share links yet. Go to your files and click "Share" on any file or folder to create a shareable link.
             </p>
-            <a href="/files"
-               class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-                </svg>
-                Go to Files
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Expiration Modal -->
-<div id="edit-expiration-modal"
-     class="fixed z-50 inset-0 overflow-y-auto hidden"
-     aria-labelledby="edit-expiration-title"
-     role="dialog"
-     aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeEditExpirationModal()"></div>
-
-        <!-- Modal panel -->
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
-            <form id="edit-expiration-form" onsubmit="return submitExpirationUpdate(event)">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h3 class="text-lg font-medium text-gray-900" id="edit-expiration-title">
-                        Edit Share Expiration
-                    </h3>
-                </div>
-
-                <div class="px-6 py-4">
-                    <input type="hidden" id="edit-share-id" name="share_id">
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="flex items-center mb-3">
-                                <input type="checkbox"
-                                       id="edit-has-expiration"
-                                       onchange="toggleEditExpiration()"
-                                       class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
-                                <span class="ml-2 text-sm font-medium text-gray-700">Set expiration date</span>
-                            </label>
-
-                            <div id="edit-expiration-container" class="hidden">
-                                <input type="datetime-local"
-                                       name="expires_at"
-                                       id="edit-expiration-input"
-                                       class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary text-sm">
-
-                                <!-- Quick presets -->
-                                <div class="flex flex-wrap gap-2 mt-3">
-                                    <button type="button"
-                                            onclick="setEditExpiration(1)"
-                                            class="px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                        1 day
-                                    </button>
-                                    <button type="button"
-                                            onclick="setEditExpiration(7)"
-                                            class="px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                        7 days
-                                    </button>
-                                    <button type="button"
-                                            onclick="setEditExpiration(30)"
-                                            class="px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                        30 days
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                    <button type="button"
-                            onclick="closeEditExpirationModal()"
-                            class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        Cancel
-                    </button>
-                    <button type="submit"
-                            class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700">
-                        Update
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Revoke Confirmation Modal -->
-<div id="revoke-confirm-modal"
-     class="fixed z-50 inset-0 overflow-y-auto hidden"
-     aria-labelledby="revoke-confirm-title"
-     role="dialog"
-     aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeRevokeConfirmModal()"></div>
-
-        <!-- Modal panel -->
-        <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div class="px-6 py-4">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900" id="revoke-confirm-title">
-                            Revoke Share
-                        </h3>
-                        <p class="text-sm text-gray-500 mt-1" id="revoke-confirm-message">
-                            Are you sure you want to revoke this share? The link will immediately stop working.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button type="button"
-                        onclick="closeRevokeConfirmModal()"
-                        class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    Cancel
-                </button>
-                <button type="button"
-                        id="revoke-confirm-btn"
-                        onclick="confirmRevokeShare()"
-                        class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
-                    Revoke
-                </button>
-            </div>
-            <input type="hidden" id="revoke-share-id">
-            <input type="hidden" id="revoke-is-bulk" value="false">
-        </div>
-    </div>
-</div>
-
-<!-- Access Logs Modal -->
-<div id="access-logs-modal"
-     class="fixed z-50 inset-0 overflow-y-auto hidden"
-     aria-labelledby="access-logs-title"
-     role="dialog"
-     aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeAccessLogsModal()"></div>
-
-        <!-- Modal panel -->
-        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 class="text-lg font-medium text-gray-900" id="access-logs-title">
-                    Access Logs
-                </h3>
-                <button type="button"
-                        onclick="closeAccessLogsModal()"
-                        class="text-gray-400 hover:text-gray-500">
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <div class="mt-6">
+                <a href="/files"
+                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
                     </svg>
-                </button>
-            </div>
-
-            <div id="access-logs-content" class="flex-1 overflow-y-auto p-6">
-                <!-- Logs will be loaded here -->
-                <div class="flex justify-center py-8">
-                    <svg class="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </div>
+                    Browse Files
+                </a>
             </div>
         </div>
     </div>

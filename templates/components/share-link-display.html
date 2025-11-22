@@ -1,182 +1,117 @@
 <!-- Share Link Display Component -->
-<!-- Shows generated share URL with copy functionality and QR code option -->
-
+<!-- Shows the generated share link with copy functionality and share info -->
 {{define "share-link-display"}}
-<div class="bg-green-50 border border-green-200 rounded-lg p-4" data-share-url="{{.URL}}">
+<div class="bg-green-50 border border-green-200 rounded-lg p-4" data-share-url="{{.ShareURL}}">
     <!-- Success Header -->
     <div class="flex items-center mb-3">
-        <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-            </svg>
-        </div>
-        <p class="ml-2 text-sm font-medium text-green-800">
-            Share link created successfully!
-        </p>
+        <svg class="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span class="font-medium text-green-800">Share link created!</span>
     </div>
 
-    <!-- Share URL Display -->
-    <div class="flex items-center space-x-2">
-        <div class="flex-1 min-w-0">
+    <!-- Share URL Input with Copy Button -->
+    <div class="flex items-center space-x-2 mb-3">
+        <div class="flex-1 relative">
             <input type="text"
                    id="share-url-input"
-                   value="{{.URL}}"
+                   value="{{.ShareURL}}"
                    readonly
-                   class="block w-full bg-white border border-gray-300 rounded-md py-2 px-3 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary cursor-text"
+                   class="w-full bg-white border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                    onclick="this.select()"
-                   aria-label="Share link URL">
+                   aria-label="Share URL">
+            <button type="button"
+                    onclick="copyShareLinkFromInput()"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none"
+                    title="Copy to clipboard"
+                    aria-label="Copy share URL to clipboard">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+            </button>
         </div>
         <button type="button"
                 onclick="copyShareLinkFromInput()"
-                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                title="Copy to clipboard"
-                aria-label="Copy share link">
-            <svg id="copy-icon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
             </svg>
-            <svg id="copy-success-icon" class="h-4 w-4 text-green-500 hidden" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-            </svg>
-            <span class="ml-1.5">Copy</span>
+            Copy
         </button>
     </div>
 
-    <!-- Share Info & QR Code Row -->
-    <div class="mt-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <!-- Share Details -->
-        <div class="text-xs text-gray-600 space-y-1">
-            {{if .PermissionType}}
-            <div class="flex items-center">
-                <span class="text-gray-500 w-24">Permission:</span>
-                <span class="permission-badge permission-badge-{{.PermissionType}}">
-                    {{if eq .PermissionType "read"}}Read-only{{end}}
-                    {{if eq .PermissionType "read_upload"}}Read & Upload{{end}}
-                    {{if eq .PermissionType "upload_only"}}Upload-only{{end}}
-                </span>
-            </div>
-            {{end}}
-            {{if .ExpiresAt}}
-            <div class="flex items-center">
-                <span class="text-gray-500 w-24">Expires:</span>
-                <span>{{.ExpiresAt}}</span>
-            </div>
-            {{end}}
-            {{if .IsPasswordProtected}}
-            <div class="flex items-center">
-                <span class="text-gray-500 w-24">Password:</span>
-                <span class="flex items-center text-amber-700">
-                    <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                    </svg>
-                    Protected
-                </span>
-            </div>
-            {{end}}
-        </div>
-
-        <!-- QR Code Button -->
-        <button type="button"
-                onclick="showShareQRCode('{{.URL}}')"
-                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+    <!-- Share Details -->
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+        <!-- Permission Badge -->
+        {{if eq .PermissionType "read"}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
             </svg>
-            Show QR Code
-        </button>
+            READ-ONLY
+        </span>
+        {{else if eq .PermissionType "read_upload"}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
+            READ & UPLOAD
+        </span>
+        {{else if eq .PermissionType "upload_only"}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            UPLOAD-ONLY
+        </span>
+        {{end}}
+
+        <!-- Password Protected Badge -->
+        {{if .IsPasswordProtected}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            Protected
+        </span>
+        {{end}}
+
+        <!-- Expiration Info -->
+        {{if .ExpiresAt}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Expires {{.ExpiresAtFormatted}}
+        </span>
+        {{else}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Never expires
+        </span>
+        {{end}}
     </div>
 
     <!-- Instructions -->
-    <div class="mt-4 bg-white rounded-md p-3 border border-green-100">
-        <p class="text-xs text-gray-600">
-            <svg class="inline h-4 w-4 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Share this link with anyone you want to give access.
-            {{if .IsPasswordProtected}}Don't forget to share the password separately!{{end}}
-        </p>
-    </div>
+    <p class="mt-3 text-sm text-gray-600">
+        Share this link with anyone you want to give access to this {{if eq .ResourceType "directory"}}folder{{else}}file{{end}}.
+        {{if .IsPasswordProtected}}They will need the password you set to access it.{{end}}
+    </p>
 </div>
 {{end}}
 
-<!-- Inline Share Link Display (for share list items) -->
-{{define "share-link-inline"}}
-<div class="flex items-center space-x-2 min-w-0" data-share-url="{{.URL}}">
-    <span class="text-sm font-mono text-gray-600 truncate bg-gray-100 px-2 py-1 rounded"
-          title="{{.URL}}">
-        {{.TruncatedURL}}
-    </span>
-    <button type="button"
-            onclick="copyShareLink('{{.URL}}')"
-            class="flex-shrink-0 text-gray-400 hover:text-primary focus:outline-none"
-            title="Copy link"
-            aria-label="Copy share link">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+<!-- Error Display Component -->
+{{define "share-error"}}
+<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+    <div class="flex items-center">
+        <svg class="h-5 w-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
-    </button>
+        <span class="font-medium text-red-800">Failed to create share</span>
+    </div>
+    <p class="mt-2 text-sm text-red-700">{{.Error}}</p>
 </div>
 {{end}}
-
-<!-- QR Code Modal -->
-<div id="qr-code-modal"
-     class="fixed z-[60] inset-0 overflow-y-auto hidden"
-     aria-labelledby="qr-modal-title"
-     role="dialog"
-     aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeQRCodeModal()"></div>
-
-        <!-- Modal panel -->
-        <div class="relative bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center">
-            <button type="button"
-                    onclick="closeQRCodeModal()"
-                    class="absolute top-3 right-3 text-gray-400 hover:text-gray-500">
-                <span class="sr-only">Close</span>
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-
-            <h3 class="text-lg font-medium text-gray-900 mb-4" id="qr-modal-title">Scan to Access</h3>
-
-            <!-- QR Code Container -->
-            <div id="qr-code-container" class="flex items-center justify-center bg-white p-4 border rounded-lg mb-4">
-                <div id="qr-code-display" class="w-48 h-48"></div>
-            </div>
-
-            <p class="text-sm text-gray-500">
-                Scan this QR code to access the shared content.
-            </p>
-        </div>
-    </div>
-</div>
-
-<style>
-/* Permission badge styles */
-.permission-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.125rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.625rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-}
-
-.permission-badge-read {
-    background-color: rgb(219 234 254); /* bg-blue-100 */
-    color: rgb(30 64 175); /* text-blue-800 */
-}
-
-.permission-badge-read_upload {
-    background-color: rgb(209 250 229); /* bg-green-100 */
-    color: rgb(22 101 52); /* text-green-800 */
-}
-
-.permission-badge-upload_only {
-    background-color: rgb(254 243 199); /* bg-yellow-100 */
-    color: rgb(146 64 14); /* text-yellow-800 */
-}
-</style>
