@@ -212,29 +212,8 @@ func TestLargeFileDownload_Performance(t *testing.T) {
 	// 5. Verify memory usage is reasonable (streaming, not loading all)
 }
 
-// Helper functions for integration tests would go here
-
-// setupTestApp creates a test PocketBase instance with test database
-func setupTestApp(t *testing.T) interface{} {
-	// Would create and configure test PocketBase app
-	// Would migrate test database
-	// Would setup test S3 connection
-	return nil
-}
-
-// cleanupTestApp cleans up test resources
-func cleanupTestApp(app interface{}) {
-	// Would clean up test database
-	// Would clean up test S3 files
-	// Would close connections
-}
-
-// createTestUser creates a test user and returns auth token
-func createTestUser(t *testing.T, app interface{}, email string) string {
-	// Would create user in test database
-	// Would return auth token
-	return ""
-}
+// Helper functions for integration tests
+// Note: Common helpers (setupTestApp, createTestUser, createTestShare) are defined in file_upload_test.go
 
 // createTestFile creates a test file record
 func createTestFile(t *testing.T, app interface{}, userID, fileName string, content []byte) string {
@@ -244,14 +223,14 @@ func createTestFile(t *testing.T, app interface{}, userID, fileName string, cont
 	return ""
 }
 
-// createTestShare creates a test share link
-func createTestShare(t *testing.T, app interface{}, userID, fileID, permType string) string {
-	// Would create share record
-	// Would return share token
-	return ""
+// cleanupTestApp cleans up test resources
+func cleanupTestApp(app interface{}) {
+	// Would clean up test database
+	// Would clean up test S3 files
+	// Would close connections
 }
 
-// MockHTTPRequest creates a mock HTTP request for testing
+// mockHTTPRequest creates a mock HTTP request for testing
 func mockHTTPRequest(method, url string, body io.Reader, headers map[string]string) *http.Request {
 	req := httptest.NewRequest(method, url, body)
 	for k, v := range headers {
