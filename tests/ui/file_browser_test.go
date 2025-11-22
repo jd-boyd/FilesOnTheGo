@@ -272,8 +272,7 @@ func TestFileActionsTemplateContainsRequiredElements(t *testing.T) {
 		{"view toggle", "view-list-btn"},
 		{"view toggle grid", "view-grid-btn"},
 		{"new folder modal", "new-folder-modal"},
-		{"upload modal", "upload-modal"},
-		{"drop zone", "drop-zone"},
+		{"upload modal include", "upload-modal.html"},
 	}
 
 	for _, elem := range requiredElements {
