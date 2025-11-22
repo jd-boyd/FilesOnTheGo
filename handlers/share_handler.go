@@ -747,6 +747,8 @@ func (h *ShareHandler) renderTemplate(c *core.RequestEvent, templateName string,
 }
 
 // buildShareLinkDisplayHTML builds the HTML for a newly created share link
+const passwordBadgeHTML = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>Protected</span>`
+
 func (h *ShareHandler) buildShareLinkDisplayHTML(data ShareHTMXData) string {
 	expiresInfo := "Never expires"
 	if data.ExpiresAtFormatted != "" {
@@ -756,7 +758,7 @@ func (h *ShareHandler) buildShareLinkDisplayHTML(data ShareHTMXData) string {
 	permBadge := h.getPermissionBadgeHTML(data.PermissionType)
 	passwordBadge := ""
 	if data.IsPasswordProtected {
-		passwordBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>Protected</span>`
+		passwordBadge = passwordBadgeHTML
 	}
 
 	resourceType := "file"
