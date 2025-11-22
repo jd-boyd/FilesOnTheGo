@@ -1,0 +1,256 @@
+<!-- Share List Item Component -->
+<!-- Displays individual share information with actions -->
+
+{{define "share-list-item"}}
+<div class="share-item bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+     data-share-id="{{.ID}}"
+     data-share-url="{{.URL}}">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <!-- Share Info -->
+        <div class="flex-1 min-w-0">
+            <!-- URL Row -->
+            <div class="flex items-center space-x-2 mb-2">
+                <span class="text-sm font-mono bg-gray-100 px-2 py-1 rounded truncate max-w-xs"
+                      title="{{.URL}}">
+                    {{.TruncatedURL}}
+                </span>
+                <button type="button"
+                        onclick="copyShareLink('{{.URL}}')"
+                        class="flex-shrink-0 text-gray-400 hover:text-primary focus:outline-none p-1"
+                        title="Copy link"
+                        aria-label="Copy share link">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Metadata Row -->
+            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                <!-- Permission Badge -->
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full font-medium
+                    {{if eq .PermissionType "read"}}bg-blue-100 text-blue-800{{end}}
+                    {{if eq .PermissionType "read_upload"}}bg-green-100 text-green-800{{end}}
+                    {{if eq .PermissionType "upload_only"}}bg-yellow-100 text-yellow-800{{end}}">
+                    {{if eq .PermissionType "read"}}
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    READ-ONLY
+                    {{end}}
+                    {{if eq .PermissionType "read_upload"}}
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    READ & UPLOAD
+                    {{end}}
+                    {{if eq .PermissionType "upload_only"}}
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    UPLOAD-ONLY
+                    {{end}}
+                </span>
+
+                <!-- Password Protected -->
+                {{if .IsPasswordProtected}}
+                <span class="inline-flex items-center text-amber-600" title="Password protected">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </span>
+                {{end}}
+
+                <!-- Divider -->
+                <span class="text-gray-300">|</span>
+
+                <!-- Expiration -->
+                {{if .ExpiresAt}}
+                <span class="flex items-center {{if .IsExpired}}text-red-600{{end}}">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    {{if .IsExpired}}Expired{{else}}Expires: {{.FormattedExpiresAt}}{{end}}
+                </span>
+                {{else}}
+                <span class="flex items-center">
+                    <svg class="w-3.5 h-3.5 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Never expires
+                </span>
+                {{end}}
+
+                <!-- Divider -->
+                <span class="text-gray-300">|</span>
+
+                <!-- Access Count -->
+                <button type="button"
+                        onclick="viewShareAccessLogs('{{.ID}}')"
+                        class="flex items-center hover:text-primary focus:outline-none">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    {{.AccessCount}} access{{if ne .AccessCount 1}}es{{end}}
+                </button>
+
+                <!-- Divider -->
+                <span class="text-gray-300">|</span>
+
+                <!-- Created Date -->
+                <span class="flex items-center" title="Created on {{.FormattedCreated}}">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    {{.FormattedCreated}}
+                </span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center space-x-2 flex-shrink-0">
+            <!-- Edit Expiration Button -->
+            <button type="button"
+                    onclick="editShareExpiration('{{.ID}}', '{{.ExpiresAt}}')"
+                    class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    title="Edit expiration">
+                <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Edit
+            </button>
+
+            <!-- Revoke Button -->
+            <button type="button"
+                    onclick="revokeShare('{{.ID}}')"
+                    class="inline-flex items-center px-2.5 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    title="Revoke share">
+                <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Revoke
+            </button>
+        </div>
+    </div>
+
+    <!-- Access Logs Container (hidden by default) -->
+    <div id="access-logs-{{.ID}}" class="mt-4 hidden border-t border-gray-100 pt-4">
+        <div class="flex items-center justify-between mb-2">
+            <h4 class="text-sm font-medium text-gray-700">Recent Access Logs</h4>
+            <button type="button"
+                    onclick="hideShareAccessLogs('{{.ID}}')"
+                    class="text-gray-400 hover:text-gray-500 text-xs">
+                Hide
+            </button>
+        </div>
+        <div id="access-logs-content-{{.ID}}" class="text-sm text-gray-600">
+            <!-- Logs will be loaded here -->
+        </div>
+    </div>
+</div>
+{{end}}
+
+<!-- Compact Share List Item (for modal existing shares list) -->
+{{define "share-list-item-compact"}}
+<div class="share-item border border-gray-200 rounded-md p-3 hover:bg-gray-50 transition-colors {{if .IsExpired}}opacity-60{{end}}"
+     data-share-id="{{.ID}}"
+     data-share-url="{{.URL}}">
+    <div class="flex items-center justify-between">
+        <div class="flex-1 min-w-0 mr-4">
+            <!-- URL & Copy -->
+            <div class="flex items-center space-x-2 mb-1.5">
+                <span class="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded truncate max-w-[200px]"
+                      title="{{.URL}}">
+                    {{.TruncatedURL}}
+                </span>
+                <button type="button"
+                        onclick="copyShareLink('{{.URL}}')"
+                        class="text-gray-400 hover:text-primary"
+                        title="Copy">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Metadata -->
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+                <!-- Permission Badge -->
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase
+                    {{if eq .PermissionType "read"}}bg-blue-100 text-blue-700{{end}}
+                    {{if eq .PermissionType "read_upload"}}bg-green-100 text-green-700{{end}}
+                    {{if eq .PermissionType "upload_only"}}bg-yellow-100 text-yellow-700{{end}}">
+                    {{if eq .PermissionType "read"}}Read{{end}}
+                    {{if eq .PermissionType "read_upload"}}Read+Upload{{end}}
+                    {{if eq .PermissionType "upload_only"}}Upload{{end}}
+                </span>
+
+                {{if .IsPasswordProtected}}
+                <svg class="w-3 h-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Password protected">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                {{end}}
+
+                {{if .ExpiresAt}}
+                <span class="{{if .IsExpired}}text-red-500{{end}}">
+                    {{if .IsExpired}}Expired{{else}}{{.FormattedExpiresAt}}{{end}}
+                </span>
+                {{end}}
+
+                <span>{{.AccessCount}} views</span>
+            </div>
+        </div>
+
+        <!-- Revoke Button -->
+        <button type="button"
+                onclick="revokeShareFromModal('{{.ID}}')"
+                class="text-red-600 hover:text-red-800 p-1"
+                title="Revoke">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+{{end}}
+
+<!-- Access Log Entry -->
+{{define "access-log-entry"}}
+<div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+    <div class="flex items-center space-x-3">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full
+            {{if eq .Action "view"}}bg-blue-100 text-blue-600{{end}}
+            {{if eq .Action "download"}}bg-green-100 text-green-600{{end}}
+            {{if eq .Action "upload"}}bg-yellow-100 text-yellow-600{{end}}">
+            {{if eq .Action "view"}}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            {{end}}
+            {{if eq .Action "download"}}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            {{end}}
+            {{if eq .Action "upload"}}
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+            </svg>
+            {{end}}
+        </span>
+        <div>
+            <span class="text-sm text-gray-700 capitalize">{{.Action}}</span>
+            {{if .FileName}}
+            <span class="text-xs text-gray-500 ml-1">({{.FileName}})</span>
+            {{end}}
+        </div>
+    </div>
+    <div class="text-right">
+        <div class="text-xs text-gray-500">{{.FormattedTime}}</div>
+        <div class="text-[10px] text-gray-400" title="{{.IPAddress}}">{{.TruncatedIP}}</div>
+    </div>
+</div>
+{{end}}

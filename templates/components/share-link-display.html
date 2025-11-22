@@ -1,0 +1,182 @@
+<!-- Share Link Display Component -->
+<!-- Shows generated share URL with copy functionality and QR code option -->
+
+{{define "share-link-display"}}
+<div class="bg-green-50 border border-green-200 rounded-lg p-4" data-share-url="{{.URL}}">
+    <!-- Success Header -->
+    <div class="flex items-center mb-3">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <p class="ml-2 text-sm font-medium text-green-800">
+            Share link created successfully!
+        </p>
+    </div>
+
+    <!-- Share URL Display -->
+    <div class="flex items-center space-x-2">
+        <div class="flex-1 min-w-0">
+            <input type="text"
+                   id="share-url-input"
+                   value="{{.URL}}"
+                   readonly
+                   class="block w-full bg-white border border-gray-300 rounded-md py-2 px-3 text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary cursor-text"
+                   onclick="this.select()"
+                   aria-label="Share link URL">
+        </div>
+        <button type="button"
+                onclick="copyShareLinkFromInput()"
+                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                title="Copy to clipboard"
+                aria-label="Copy share link">
+            <svg id="copy-icon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            <svg id="copy-success-icon" class="h-4 w-4 text-green-500 hidden" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-1.5">Copy</span>
+        </button>
+    </div>
+
+    <!-- Share Info & QR Code Row -->
+    <div class="mt-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <!-- Share Details -->
+        <div class="text-xs text-gray-600 space-y-1">
+            {{if .PermissionType}}
+            <div class="flex items-center">
+                <span class="text-gray-500 w-24">Permission:</span>
+                <span class="permission-badge permission-badge-{{.PermissionType}}">
+                    {{if eq .PermissionType "read"}}Read-only{{end}}
+                    {{if eq .PermissionType "read_upload"}}Read & Upload{{end}}
+                    {{if eq .PermissionType "upload_only"}}Upload-only{{end}}
+                </span>
+            </div>
+            {{end}}
+            {{if .ExpiresAt}}
+            <div class="flex items-center">
+                <span class="text-gray-500 w-24">Expires:</span>
+                <span>{{.ExpiresAt}}</span>
+            </div>
+            {{end}}
+            {{if .IsPasswordProtected}}
+            <div class="flex items-center">
+                <span class="text-gray-500 w-24">Password:</span>
+                <span class="flex items-center text-amber-700">
+                    <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    Protected
+                </span>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- QR Code Button -->
+        <button type="button"
+                onclick="showShareQRCode('{{.URL}}')"
+                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+            </svg>
+            Show QR Code
+        </button>
+    </div>
+
+    <!-- Instructions -->
+    <div class="mt-4 bg-white rounded-md p-3 border border-green-100">
+        <p class="text-xs text-gray-600">
+            <svg class="inline h-4 w-4 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Share this link with anyone you want to give access.
+            {{if .IsPasswordProtected}}Don't forget to share the password separately!{{end}}
+        </p>
+    </div>
+</div>
+{{end}}
+
+<!-- Inline Share Link Display (for share list items) -->
+{{define "share-link-inline"}}
+<div class="flex items-center space-x-2 min-w-0" data-share-url="{{.URL}}">
+    <span class="text-sm font-mono text-gray-600 truncate bg-gray-100 px-2 py-1 rounded"
+          title="{{.URL}}">
+        {{.TruncatedURL}}
+    </span>
+    <button type="button"
+            onclick="copyShareLink('{{.URL}}')"
+            class="flex-shrink-0 text-gray-400 hover:text-primary focus:outline-none"
+            title="Copy link"
+            aria-label="Copy share link">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+        </svg>
+    </button>
+</div>
+{{end}}
+
+<!-- QR Code Modal -->
+<div id="qr-code-modal"
+     class="fixed z-[60] inset-0 overflow-y-auto hidden"
+     aria-labelledby="qr-modal-title"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeQRCodeModal()"></div>
+
+        <!-- Modal panel -->
+        <div class="relative bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center">
+            <button type="button"
+                    onclick="closeQRCodeModal()"
+                    class="absolute top-3 right-3 text-gray-400 hover:text-gray-500">
+                <span class="sr-only">Close</span>
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+
+            <h3 class="text-lg font-medium text-gray-900 mb-4" id="qr-modal-title">Scan to Access</h3>
+
+            <!-- QR Code Container -->
+            <div id="qr-code-container" class="flex items-center justify-center bg-white p-4 border rounded-lg mb-4">
+                <div id="qr-code-display" class="w-48 h-48"></div>
+            </div>
+
+            <p class="text-sm text-gray-500">
+                Scan this QR code to access the shared content.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Permission badge styles */
+.permission-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.permission-badge-read {
+    background-color: rgb(219 234 254); /* bg-blue-100 */
+    color: rgb(30 64 175); /* text-blue-800 */
+}
+
+.permission-badge-read_upload {
+    background-color: rgb(209 250 229); /* bg-green-100 */
+    color: rgb(22 101 52); /* text-green-800 */
+}
+
+.permission-badge-upload_only {
+    background-color: rgb(254 243 199); /* bg-yellow-100 */
+    color: rgb(146 64 14); /* text-yellow-800 */
+}
+</style>
