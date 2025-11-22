@@ -1,10 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -57,16 +56,32 @@ func main() {
 		Packages: make(map[string]*PackageSummary),
 	}
 
-	decoder := json.NewDecoder(os.Stdin)
+	// Read line by line to handle mixed output (test JSON + log output)
+	scanner := bufio.NewScanner(os.Stdin)
+	// Increase buffer size for long lines
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
 
-	for {
-		var event TestEvent
-		err := decoder.Decode(&event)
-		if err == io.EOF {
-			break
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
 		}
+
+		// Only try to parse lines that look like JSON objects
+		if !strings.HasPrefix(strings.TrimSpace(line), "{") {
+			continue
+		}
+
+		var event TestEvent
+		err := json.Unmarshal([]byte(line), &event)
 		if err != nil {
-			log.Printf("Error decoding JSON: %v", err)
+			// Silently skip non-test JSON (e.g., log output from zerolog)
+			continue
+		}
+
+		// Only process events that have an Action (test events)
+		if event.Action == "" {
 			continue
 		}
 
