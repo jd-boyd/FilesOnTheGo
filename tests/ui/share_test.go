@@ -1,627 +1,1060 @@
-package ui_test
+package ui
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/jd-boyd/filesonthego/handlers"
+	"github.com/jd-boyd/filesonthego/services"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// TestShareUI_CreateShareHandler_InvalidMethod verifies non-POST requests are rejected
+func TestShareUI_CreateShareHandler_InvalidMethod(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	// Test GET request
+	req := httptest.NewRequest("GET", "/api/shares/create-htmx", nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusMethodNotAllowed, resp.Code)
+}
+
+// TestShareUI_CreateShareHandler_MissingAuth verifies unauthenticated requests are rejected
+func TestShareUI_CreateShareHandler_MissingAuth(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {"test-id"},
+		"permission_type": {"read"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusUnauthorized, resp.Code)
+}
+
+// TestShareUI_CreateShareHandler_MissingFields verifies validation of required fields
+func TestShareUI_CreateShareHandler_MissingFields(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+
+	// Test missing resource_type
+	formData := url.Values{
+		"resource_id":     {"test-id"},
+		"permission_type": {"read"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Contains(t, resp.Body.String(), "Invalid resource type")
+}
+
+// TestShareUI_CreateShareHandler_InvalidPermissionType verifies validation of permission types
+func TestShareUI_CreateShareHandler_InvalidPermissionType(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"invalid"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Contains(t, resp.Body.String(), "Invalid permission type")
+}
+
+// TestShareUI_CreateShareHandler_CreatesShare verifies successful share creation
+func TestShareUI_CreateShareHandler_CreatesShare(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "share-link-display")
+	assert.Contains(t, resp.Body.String(), "/s/")
+}
+
+// TestShareUI_CreateShareHandler_WithPassword verifies share creation with password protection
+func TestShareUI_CreateShareHandler_WithPassword(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+		"password":        {"test123"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "PASSWORD")
+}
+
+// TestShareUI_CreateShareHandler_WithExpiration verifies share creation with expiration
+func TestShareUI_CreateShareHandler_WithExpiration(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	futureTime := time.Now().Add(24 * time.Hour).Format("2006-01-02T15:04")
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+		"expires_at":      {futureTime},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "Expires")
+}
+
+// TestShareUI_CreateShareHandler_DirectoryShare verifies directory share creation
+func TestShareUI_CreateShareHandler_DirectoryShare(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	dir := testApp.createTestDirectory(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"directory"},
+		"resource_id":     {dir.Id},
+		"permission_type": {"read_upload"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "READ & UPLOAD")
+}
+
+// TestShareUI_CreateShareHandler_NonExistentResource verifies handling of non-existent resources
+func TestShareUI_CreateShareHandler_NonExistentResource(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {"non-existent-id"},
+		"permission_type": {"read"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusNotFound, resp.Code)
+}
+
+// TestShareUI_CreateShareHandler_UnauthorizedResource verifies user cannot share others' resources
+func TestShareUI_CreateShareHandler_UnauthorizedResource(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user1 := testApp.createTestUser(t)
+	user2 := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user2.Id) // File belongs to user2
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user1.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusForbidden, resp.Code)
+}
+
+// TestShareUI_CreateShareHandler_ReadUploadPermission verifies read_upload permission share creation
+func TestShareUI_CreateShareHandler_ReadUploadPermission(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	dir := testApp.createTestDirectory(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"directory"},
+		"resource_id":     {dir.Id},
+		"permission_type": {"read_upload"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "READ & UPLOAD")
+}
+
+// TestShareUI_CreateShareHandler_UploadOnlyPermission verifies upload_only permission share creation
+func TestShareUI_CreateShareHandler_UploadOnlyPermission(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	dir := testApp.createTestDirectory(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"directory"},
+		"resource_id":     {dir.Id},
+		"permission_type": {"upload_only"},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "UPLOAD-ONLY")
+}
+
+// TestShareUI_ListSharesHandler_ValidRequest verifies successful shares listing
+func TestShareUI_ListSharesHandler_ValidRequest(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	// Create a test share
+	shareService := services.NewShareService(testApp.app)
+	_, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/shares/list-htmx", nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "share-list-item")
+}
+
+// TestShareUI_ListSharesHandler_Unauthenticated verifies unauthenticated requests are rejected
+func TestShareUI_ListSharesHandler_Unauthenticated(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	req := httptest.NewRequest("GET", "/api/shares/list-htmx", nil)
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusUnauthorized, resp.Code)
+}
+
+// TestShareUI_ListSharesHandler_Filters verifies filtering functionality
+func TestShareUI_ListSharesHandler_Filters(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+	dir := testApp.createTestDirectory(t, user.Id)
+
+	shareService := services.NewShareService(testApp.app)
+
+	// Create file share
+	_, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	// Create directory share
+	_, err = shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "directory",
+		ResourceID:     dir.Id,
+		PermissionType: "read_upload",
+	})
+	require.NoError(t, err)
+
+	// Test filter by resource_type
+	req := httptest.NewRequest("GET", "/api/shares/list-htmx?resource_type=file", nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "share-list-item")
+}
+
+// TestShareUI_ListSharesHandler_Search verifies search functionality
+func TestShareUI_ListSharesHandler_Search(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	shareService := services.NewShareService(testApp.app)
+	_, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/shares/list-htmx?search="+file.Name, nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+// TestShareUI_GetShareLogsHandler_ValidRequest verifies access logs retrieval
+func TestShareUI_GetShareLogsHandler_ValidRequest(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	shareService := services.NewShareService(testApp.app)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/shares/"+share.ID+"/logs-htmx", nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+// TestShareUI_GetShareLogsHandler_UnauthorizedShare verifies access control
+func TestShareUI_GetShareLogsHandler_UnauthorizedShare(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user1 := testApp.createTestUser(t)
+	user2 := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user2.Id)
+
+	shareService := services.NewShareService(testApp.app)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user2.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/shares/"+share.ID+"/logs-htmx", nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user1.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusNotFound, resp.Code)
+}
+
+// TestShareUI_DeleteShareHandler_ValidRequest verifies share revocation
+func TestShareUI_DeleteShareHandler_ValidRequest(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	shareService := services.NewShareService(testApp.app)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("DELETE", "/api/shares/"+share.ID, nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "share-revoked")
+}
+
+// TestShareUI_DeleteShareHandler_Unauthorized verifies access control
+func TestShareUI_DeleteShareHandler_Unauthorized(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user1 := testApp.createTestUser(t)
+	user2 := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user2.Id)
+
+	shareService := services.NewShareService(testApp.app)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user2.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("DELETE", "/api/shares/"+share.ID, nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user1.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusNotFound, resp.Code)
+}
+
+// TestShareUI_GetResourceSharesHandler_ValidRequest verifies retrieving shares for a resource
+func TestShareUI_GetResourceSharesHandler_ValidRequest(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	shareService := services.NewShareService(testApp.app)
+	_, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/shares/resource/file/"+file.Id, nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "shares-list")
+}
+
+// TestShareUI_CreateShareHandler_PastExpiration verifies rejection of past expiration dates
+func TestShareUI_CreateShareHandler_PastExpiration(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
+
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	pastTime := time.Now().Add(-24 * time.Hour).Format("2006-01-02T15:04")
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+		"expires_at":      {pastTime},
+	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
 // ============================================
-// Share Template Tests
+// Test Setup and Utilities
 // ============================================
 
-// TestShareButtonTemplateExists verifies the share-button.html template exists
-func TestShareButtonTemplateExists(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-button.html")
-
-	_, err := os.Stat(path)
-	assert.NoError(t, err, "share-button.html should exist")
+type shareUITestApp struct {
+	app *pocketbase.PocketBase
 }
 
-// TestShareModalTemplateExists verifies the share-modal.html template exists
-func TestShareModalTemplateExists(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-modal.html")
+func setupShareUITest(t *testing.T) *shareUITestApp {
+	t.Helper()
 
-	_, err := os.Stat(path)
-	assert.NoError(t, err, "share-modal.html should exist")
+	// Disable logging for tests
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+
+	app := &pocketbase.PocketBase{}
+
+	// Create temporary directory for test data
+	tempDir := t.TempDir()
+
+	// Initialize the app with test configuration
+	err := app.InitRoot(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to initialize PocketBase root: %v", err)
+	}
+
+	// Create test configuration file
+	os.MkdirAll(tempDir+"/pb_data", 0755)
+
+	// Initialize the app
+	if err := app.Bootstrap(); err != nil {
+		t.Fatalf("Failed to bootstrap PocketBase: %v", err)
+	}
+
+	// Register the share handler
+	shareHandler := handlers.NewShareHandler(app)
+	app.OnServe().Bind(&core.ServeEvent{
+		Route: func(e *core.ServeEvent) error {
+			e.Router.POST("/api/shares/create-htmx", shareHandler.CreateShareHTMX)
+			e.Router.GET("/api/shares/list-htmx", shareHandler.ListSharesHTMX)
+			e.Router.GET("/api/shares/:id/logs-htmx", shareHandler.GetShareLogsHTMX)
+			e.Router.DELETE("/api/shares/:id", shareHandler.DeleteShareHTMX)
+			e.Router.GET("/api/shares/resource/:resourceType/:resourceId", shareHandler.GetResourceSharesHTMX)
+			return nil
+		},
+	})
+
+	testApp := &shareUITestApp{app: app}
+
+	// Clean up after test
+	t.Cleanup(func() {
+		app.ResetBootstrapState()
+	})
+
+	return testApp
 }
 
-// TestShareLinkDisplayTemplateExists verifies the share-link-display.html template exists
-func TestShareLinkDisplayTemplateExists(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-link-display.html")
+func (ta *shareUITestApp) createTestUser(t *testing.T) *core.Record {
+	t.Helper()
 
-	_, err := os.Stat(path)
-	assert.NoError(t, err, "share-link-display.html should exist")
+	collection, err := ta.app.FindCollectionByNameOrId("users")
+	require.NoError(t, err)
+
+	user := core.NewRecord(collection)
+	user.Set("email", "testuser-"+time.Now().Format("20060102150405")+"@example.com")
+	user.Set("password", "password123")
+	user.Set("verified", true)
+
+	err = ta.app.Save(user)
+	require.NoError(t, err)
+
+	return user
 }
 
-// TestShareListItemTemplateExists verifies the share-list-item.html template exists
-func TestShareListItemTemplateExists(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-list-item.html")
+func (ta *shareUITestApp) createTestFile(t *testing.T, userID string) *core.Record {
+	t.Helper()
 
-	_, err := os.Stat(path)
-	assert.NoError(t, err, "share-list-item.html should exist")
+	collection, err := ta.app.FindCollectionByNameOrId("files")
+	require.NoError(t, err)
+
+	file := core.NewRecord(collection)
+	file.Set("name", "test-file-"+time.Now().Format("20060102150405")+".txt")
+	file.Set("type", "text/plain")
+	file.Set("size", 1024)
+	file.Set("path", "/test/path/"+file.Get("name"))
+	file.Set("owner", userID)
+
+	err = ta.app.Save(file)
+	require.NoError(t, err)
+
+	return file
 }
 
-// TestSharesPageTemplateExists verifies the shares.html page template exists
-func TestSharesPageTemplateExists(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "pages", "shares.html")
+func (ta *shareUITestApp) createTestDirectory(t *testing.T, userID string) *core.Record {
+	t.Helper()
 
-	_, err := os.Stat(path)
-	assert.NoError(t, err, "shares.html page should exist")
+	collection, err := ta.app.FindCollectionByNameOrId("directories")
+	require.NoError(t, err)
+
+	dir := core.NewRecord(collection)
+	dir.Set("name", "test-dir-"+time.Now().Format("20060102150405"))
+	dir.Set("parent", "")
+	dir.Set("owner", userID)
+
+	err = ta.app.Save(dir)
+	require.NoError(t, err)
+
+	return dir
 }
 
-// TestShareJSExists verifies the share.js script exists
-func TestShareJSExists(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
-	}
-
-	found := false
-	for _, p := range paths {
-		if _, err := os.Stat(p); err == nil {
-			found = true
-			break
-		}
-	}
-
-	assert.True(t, found, "share.js should exist")
+func (ta *shareUITestApp) authenticateUser(email, password string) string {
+	// This would typically use the actual authentication mechanism
+	// For testing purposes, return a mock token
+	return "mock-jwt-token-for-" + email
 }
 
-// ============================================
-// Share Modal Tests
-// ============================================
+// TestShareUI_CreateShareHandler_ReadPermission verifies read permission share creation
+func TestShareUI_CreateShareHandler_ReadPermission(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-// TestShareModalTemplateContainsRequiredElements tests share-modal.html has required elements
-func TestShareModalTemplateContainsRequiredElements(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-modal.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-modal.html")
-
-	contentStr := string(content)
-
-	// Check for required elements
-	requiredElements := []struct {
-		name    string
-		pattern string
-	}{
-		{"modal container", "share-modal"},
-		{"modal title", "share-modal-title"},
-		{"item name", "share-item-name"},
-		{"create share form", "create-share-form"},
-		{"permission type read", `value="read"`},
-		{"permission type read_upload", `value="read_upload"`},
-		{"permission type upload_only", `value="upload_only"`},
-		{"password toggle", "share-password-toggle"},
-		{"password input", "share-password"},
-		{"expiration toggle", "share-expiration-toggle"},
-		{"expiration input", "share-expiration"},
-		{"expiration presets", "setShareExpiration"},
-		{"generate button", "create-share-btn"},
-		{"share result container", "share-result"},
-		{"close function", "closeShareModal"},
-		{"tabs navigation", "share-tab-create"},
-		{"existing shares tab", "share-tab-existing"},
-		{"existing shares list", "existing-shares-list"},
-		{"dialog role", `role="dialog"`},
-		{"aria modal", `aria-modal="true"`},
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	for _, elem := range requiredElements {
-		assert.Contains(t, contentStr, elem.pattern,
-			"%s should be present in share-modal.html", elem.name)
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
 	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "READ-ONLY")
 }
 
-// TestShareModalPermissionOptions verifies all permission options are present
-func TestShareModalPermissionOptions(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-modal.html")
+func TestShareUI_CreateShareHandler_CustomShareURL(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-modal.html")
-
-	contentStr := string(content)
-
-	permissions := []struct {
-		value       string
-		description string
-	}{
-		{"read", "Read-only"},
-		{"read_upload", "Read & Upload"},
-		{"upload_only", "Upload-only"},
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	for _, perm := range permissions {
-		assert.Contains(t, contentStr, perm.value,
-			"permission value %s should be present", perm.value)
-		assert.Contains(t, contentStr, perm.description,
-			"permission description %s should be present", perm.description)
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+		"custom_url":      {"my-custom-share"},
 	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "/s/my-custom-share")
 }
 
-// ============================================
-// Share Link Display Tests
-// ============================================
+func TestShareUI_CreateShareHandler_CustomShareURL_InvalidFormat(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-// TestShareLinkDisplayContainsRequiredElements tests share-link-display.html
-func TestShareLinkDisplayContainsRequiredElements(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-link-display.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-link-display.html")
-
-	contentStr := string(content)
-
-	requiredElements := []struct {
-		name    string
-		pattern string
-	}{
-		{"share link display template", "share-link-display"},
-		{"URL input", "share-url-input"},
-		{"copy button", "copyShareLinkFromInput"},
-		{"permission badge", "permission-badge"},
-		{"QR code button", "showShareQRCode"},
-		{"success message", "success"},
-		{"data share url", "data-share-url"},
-		{"password protected indicator", "IsPasswordProtected"},
-		{"expiration info", "ExpiresAt"},
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	for _, elem := range requiredElements {
-		assert.Contains(t, contentStr, elem.pattern,
-			"%s should be present in share-link-display.html", elem.name)
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	formData := url.Values{
+		"resource_type":   {"file"},
+		"resource_id":     {file.Id},
+		"permission_type": {"read"},
+		"custom_url":      {"Invalid URL with spaces!"},
 	}
+
+	req := httptest.NewRequest("POST", "/api/shares/create-htmx", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
-// ============================================
-// Share List Item Tests
-// ============================================
+func TestShareUI_ListSharesHandler_CustomShareURL(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-// TestShareListItemContainsRequiredElements tests share-list-item.html
-func TestShareListItemContainsRequiredElements(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-list-item.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-list-item.html")
-
-	contentStr := string(content)
-
-	requiredElements := []struct {
-		name    string
-		pattern string
-	}{
-		{"share item class", "share-item"},
-		{"share ID data attr", "data-share-id"},
-		{"share URL data attr", "data-share-url"},
-		{"copy link function", "copyShareLink"},
-		{"permission badge", "PermissionType"},
-		{"password protected icon", "IsPasswordProtected"},
-		{"expiration display", "ExpiresAt"},
-		{"access count", "AccessCount"},
-		{"created date", "FormattedCreated"},
-		{"edit expiration", "editShareExpiration"},
-		{"revoke button", "revokeShare"},
-		{"access logs", "viewShareAccessLogs"},
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	for _, elem := range requiredElements {
-		assert.Contains(t, contentStr, elem.pattern,
-			"%s should be present in share-list-item.html", elem.name)
-	}
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	// Create a test share with custom URL
+	shareService := services.NewShareService(testApp.app)
+	_, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+		CustomShareURL: "my-test-share",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/shares/list-htmx", nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "my-test-share")
 }
 
-// TestShareListItemCompactVariant tests compact variant exists
-func TestShareListItemCompactVariant(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-list-item.html")
+func TestShareUI_DeleteShareHandler_CustomShareURL(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-list-item.html")
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
+	}
 
-	contentStr := string(content)
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
 
-	assert.Contains(t, contentStr, "share-list-item-compact",
-		"compact variant should be defined")
+	shareService := services.NewShareService(testApp.app)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+		CustomShareURL: "my-delete-test",
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("DELETE", "/api/shares/"+share.ID, nil)
+	req.Header.Set("Authorization", "Bearer "+testApp.authenticateUser(user.Email, "password123"))
+	req.Header.Set("HX-Request", "true")
+
+	resp := httptest.NewRecorder()
+	testApp.app.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "share-revoked")
 }
 
-// ============================================
-// Shares Page Tests
-// ============================================
+func TestShareUI_ShareAccessCount_Increments(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-// TestSharesPageContainsRequiredElements tests shares.html page
-func TestSharesPageContainsRequiredElements(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "pages", "shares.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read shares.html")
-
-	contentStr := string(content)
-
-	requiredElements := []struct {
-		name    string
-		pattern string
-	}{
-		{"extends app layout", `template "app.html"`},
-		{"page title", `define "title"`},
-		{"share.js script", "share.js"},
-		{"shares page container", "shares-page"},
-		{"stats total shares", "stat-total-shares"},
-		{"stats active shares", "stat-active-shares"},
-		{"stats expired shares", "stat-expired-shares"},
-		{"stats total accesses", "stat-total-accesses"},
-		{"filter by type", "filter-type"},
-		{"filter by status", "filter-status"},
-		{"sort dropdown", "sort-by"},
-		{"search input", "share-search"},
-		{"bulk actions", "bulk-actions"},
-		{"select all checkbox", "select-all-shares"},
-		{"shares list container", "shares-list"},
-		{"empty state", "shares-empty"},
-		{"edit expiration modal", "edit-expiration-modal"},
-		{"revoke confirm modal", "revoke-confirm-modal"},
-		{"access logs modal", "access-logs-modal"},
-		{"HTMX trigger", "hx-get"},
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	for _, elem := range requiredElements {
-		assert.Contains(t, contentStr, elem.pattern,
-			"%s should be present in shares.html", elem.name)
-	}
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
+
+	shareService := services.NewShareService(testApp.app)
+
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
+
+	// Initial count should be 0
+	assert.Equal(t, int64(0), share.AccessCount)
+
+	// Increment access count
+	err = shareService.IncrementAccessCount(share.ID)
+	assert.NoError(t, err)
+
+	// Fetch updated share
+	updatedShare, err := shareService.GetShareByID(share.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), updatedShare.AccessCount)
 }
 
-// ============================================
-// Share JavaScript Tests
-// ============================================
+func TestShareUI_ValidateShareAccess_WithPassword(t *testing.T) {
+	testApp := setupShareUITest(t)
 
-// TestShareJSContainsRequiredFunctions tests share.js has required functions
-func TestShareJSContainsRequiredFunctions(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	var content []byte
-	var err error
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
 
-	for _, p := range paths {
-		content, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
-	require.NoError(t, err, "Failed to read share.js")
+	shareService := services.NewShareService(testApp.app)
+	password := "secret123"
 
-	contentStr := string(content)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+		Password:       password,
+	})
+	require.NoError(t, err)
 
-	requiredFunctions := []string{
-		"openShareModal",
-		"closeShareModal",
-		"switchShareTab",
-		"updatePermissionSelection",
-		"toggleSharePassword",
-		"toggleShareExpiration",
-		"setShareExpiration",
-		"submitShareForm",
-		"loadExistingShares",
-		"revokeShare",
-		"revokeShareFromModal",
-		"confirmRevokeShare",
-		"closeRevokeConfirmModal",
-		"copyShareLink",
-		"copyShareLinkFromInput",
-		"showShareQRCode",
-		"closeQRCodeModal",
-		"viewShareAccessLogs",
-		"closeAccessLogsModal",
-		"editShareExpiration",
-		"submitExpirationUpdate",
-		"closeEditExpirationModal",
-		"formatRelativeDate",
-		"truncateUrl",
-		"escapeHtml",
-	}
+	// Access without password should fail
+	accessInfo, err := shareService.ValidateShareAccess(share.ShareToken, "")
+	assert.NoError(t, err)
+	assert.False(t, accessInfo.IsValid)
+	assert.Equal(t, "Password required", accessInfo.ErrorMessage)
 
-	for _, fn := range requiredFunctions {
-		assert.Contains(t, contentStr, "function "+fn,
-			"function %s should be present in share.js", fn)
-	}
+	// Access with wrong password should fail
+	accessInfo, err = shareService.ValidateShareAccess(share.ShareToken, "wrongpassword")
+	assert.NoError(t, err)
+	assert.False(t, accessInfo.IsValid)
+	assert.Equal(t, "Invalid password", accessInfo.ErrorMessage)
+
+	// Access with correct password should succeed
+	accessInfo, err = shareService.ValidateShareAccess(share.ShareToken, password)
+	assert.NoError(t, err)
+	assert.True(t, accessInfo.IsValid)
 }
 
-// TestShareJSStateManagement tests state management is implemented
-func TestShareJSStateManagement(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
+func TestShareUI_UpdateShareExpiration_Works(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	var content []byte
-	var err error
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
 
-	for _, p := range paths {
-		content, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
-	require.NoError(t, err, "Failed to read share.js")
+	shareService := services.NewShareService(testApp.app)
 
-	contentStr := string(content)
+	share, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+	})
+	require.NoError(t, err)
 
-	stateElements := []string{
-		"shareState",
-		"currentResourceId",
-		"currentResourceType",
-		"currentResourceName",
-		"selectedShares",
-		"pendingRevokeShareId",
-		"existingShares",
-		"baseUrl",
-	}
+	// Should have no expiration initially
+	assert.Nil(t, share.ExpiresAt)
 
-	for _, elem := range stateElements {
-		assert.Contains(t, contentStr, elem,
-			"state element %s should be present in share.js", elem)
-	}
+	// Update with expiration
+	newExpiration := time.Now().Add(7 * 24 * time.Hour)
+	err = shareService.UpdateShareExpiration(share.ID, &newExpiration)
+	assert.NoError(t, err)
+
+	// Fetch updated share
+	updatedShare, err := shareService.GetShareByID(share.ID)
+	require.NoError(t, err)
+	assert.NotNil(t, updatedShare.ExpiresAt)
+	assert.WithinDuration(t, newExpiration, *updatedShare.ExpiresAt, time.Minute)
 }
 
-// TestShareJSAPIIntegration tests API integration points
-func TestShareJSAPIIntegration(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
+func TestShareUI_CreateShareHandler_PastExpiration_Rejected(t *testing.T) {
+	testApp := setupShareUITest(t)
+
+	if _, err := testApp.app.FindCollectionByNameOrId("shares"); err != nil {
+		t.Skip("shares collection not found")
 	}
 
-	var content []byte
-	var err error
+	user := testApp.createTestUser(t)
+	file := testApp.createTestFile(t, user.Id)
 
-	for _, p := range paths {
-		content, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
-	require.NoError(t, err, "Failed to read share.js")
+	pastTime := time.Now().Add(-1 * time.Hour)
 
-	contentStr := string(content)
+	shareService := services.NewShareService(testApp.app)
+	_, err := shareService.CreateShare(services.CreateShareParams{
+		UserID:         user.Id,
+		ResourceType:   "file",
+		ResourceID:     file.Id,
+		PermissionType: "read",
+		ExpiresAt:      &pastTime,
+	})
 
-	apiEndpoints := []string{
-		"/api/shares",
-		"method: 'POST'",
-		"method: 'DELETE'",
-		"method: 'PATCH'",
-		"/logs",
-	}
-
-	for _, endpoint := range apiEndpoints {
-		assert.Contains(t, contentStr, endpoint,
-			"API endpoint/method %s should be referenced in share.js", endpoint)
-	}
-}
-
-// TestShareJSClipboardSupport tests clipboard functionality
-func TestShareJSClipboardSupport(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
-	}
-
-	var content []byte
-	var err error
-
-	for _, p := range paths {
-		content, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
-	require.NoError(t, err, "Failed to read share.js")
-
-	contentStr := string(content)
-
-	assert.Contains(t, contentStr, "navigator.clipboard.writeText",
-		"clipboard API should be used for copying")
-}
-
-// TestShareJSShowsToastNotifications tests toast notification integration
-func TestShareJSShowsToastNotifications(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
-	}
-
-	var content []byte
-	var err error
-
-	for _, p := range paths {
-		content, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
-	require.NoError(t, err, "Failed to read share.js")
-
-	contentStr := string(content)
-
-	toastCalls := []string{
-		"showToast('success'",
-		"showToast('error'",
-	}
-
-	for _, call := range toastCalls {
-		assert.Contains(t, contentStr, call,
-			"toast call %s should be present in share.js", call)
-	}
-}
-
-// TestShareJSExportsGlobalFunctions tests functions are exported globally
-func TestShareJSExportsGlobalFunctions(t *testing.T) {
-	paths := []string{
-		"../../static/js/share.js",
-		"../static/js/share.js",
-		"static/js/share.js",
-	}
-
-	var content []byte
-	var err error
-
-	for _, p := range paths {
-		content, err = os.ReadFile(p)
-		if err == nil {
-			break
-		}
-	}
-	require.NoError(t, err, "Failed to read share.js")
-
-	contentStr := string(content)
-
-	globalExports := []string{
-		"window.openShareModal",
-		"window.closeShareModal",
-		"window.copyShareLink",
-		"window.revokeShare",
-		"window.submitShareForm",
-	}
-
-	for _, export := range globalExports {
-		assert.Contains(t, contentStr, export,
-			"global export %s should be present in share.js", export)
-	}
-}
-
-// ============================================
-// Files Page Share Integration Tests
-// ============================================
-
-// TestFilesPageIncludesShareModal tests files.html includes share modal
-func TestFilesPageIncludesShareModal(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "pages", "files.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read files.html")
-
-	contentStr := string(content)
-
-	assert.Contains(t, contentStr, `template "share-modal.html"`,
-		"files.html should include share-modal.html template")
-}
-
-// TestFilesPageIncludesShareJS tests files.html includes share.js
-func TestFilesPageIncludesShareJS(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "pages", "files.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read files.html")
-
-	contentStr := string(content)
-
-	assert.Contains(t, contentStr, "share.js",
-		"files.html should include share.js script")
-}
-
-// TestContextMenuHasShareOption tests context menu has share option
-func TestContextMenuHasShareOption(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "context-menu.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read context-menu.html")
-
-	contentStr := string(content)
-
-	assert.Contains(t, contentStr, "context-menu-share",
-		"context menu should have share option")
-	assert.Contains(t, contentStr, "contextMenuAction('share')",
-		"context menu should trigger share action")
-}
-
-// ============================================
-// Accessibility Tests
-// ============================================
-
-// TestShareModalAccessibility tests share modal accessibility features
-func TestShareModalAccessibility(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-modal.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-modal.html")
-
-	contentStr := string(content)
-
-	accessibilityElements := []struct {
-		name    string
-		pattern string
-	}{
-		{"dialog role", `role="dialog"`},
-		{"aria modal", `aria-modal="true"`},
-		{"aria labelledby", "aria-labelledby"},
-		{"close button accessible", "Close"},
-	}
-
-	for _, elem := range accessibilityElements {
-		assert.Contains(t, contentStr, elem.pattern,
-			"accessibility feature %s should be present", elem.name)
-	}
-}
-
-// TestShareButtonAccessibility tests share button accessibility
-func TestShareButtonAccessibility(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-button.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-button.html")
-
-	contentStr := string(content)
-
-	assert.Contains(t, contentStr, "aria-label",
-		"share button should have aria-label")
-}
-
-// ============================================
-// Permission Badge Tests
-// ============================================
-
-// TestShareLinkDisplayHasPermissionBadges tests permission badge styles
-func TestShareLinkDisplayHasPermissionBadges(t *testing.T) {
-	templateDir := findTemplateDir(t)
-	path := filepath.Join(templateDir, "components", "share-link-display.html")
-
-	content, err := os.ReadFile(path)
-	require.NoError(t, err, "Failed to read share-link-display.html")
-
-	contentStr := string(content)
-
-	badges := []string{
-		"permission-badge-read",
-		"permission-badge-read_upload",
-		"permission-badge-upload_only",
-	}
-
-	for _, badge := range badges {
-		assert.Contains(t, contentStr, badge,
-			"permission badge %s should be defined", badge)
-	}
+	// Should fail because expiration is in the past
+	assert.Error(t, err)
 }

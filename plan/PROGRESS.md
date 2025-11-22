@@ -261,7 +261,7 @@ Read plan/step_11_upload_ui.md and implement Step 11: Upload UI with drag-and-dr
 **Duration:** 45 minutes
 **Dependencies:** Step 05, Step 09
 **Completion Date:** 2025-11-22
-**Branch:** `claude/share-creation-ui-01Nz4D1br8EJCThDvGe3Y4b2`
+**Branch:** `claude/share-creation-ui-018z4LFEdycuWLw9LpCK7BwU`
 
 **Prompt to Paste:**
 ```
@@ -280,6 +280,15 @@ Read plan/step_12_share_creation_ui.md and implement Step 12: Share creation UI 
 - Added existing shares tab with revoke/edit functionality
 - Integrated share modal with file browser context menu
 - Created comprehensive UI tests in tests/ui/share_test.go (25 tests)
+- Enhanced share modal in context-menu.html with full permission controls
+- Added HTMX endpoints to share handler (CreateShareHTMX, ListSharesHTMX, GetShareLogsHTMX)
+- Permission type selector (read, read_upload, upload_only) with descriptions
+- Password protection toggle and input
+- Expiration date picker with preset buttons (1, 7, 30, 90 days)
+- Copy to clipboard functionality with success feedback
+- Share revocation with confirmation
+- Access logs display
+- Permission badges with color coding
 
 ---
 
