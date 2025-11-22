@@ -7,6 +7,8 @@
 <script src="/static/js/upload.js" defer></script>
 <!-- File Browser JavaScript -->
 <script src="/static/js/file-browser.js" defer></script>
+<!-- Share Management JavaScript -->
+<script src="/static/js/share.js" defer></script>
 {{end}}
 
 {{define "page-header"}}
@@ -97,6 +99,9 @@
 
     <!-- File Details Modal -->
     {{template "file-details-modal.html" .}}
+
+    <!-- Share Modal -->
+    {{template "share-modal.html" .}}
 </div>
 
 <!-- Keyboard Shortcuts Help (hidden by default) -->
