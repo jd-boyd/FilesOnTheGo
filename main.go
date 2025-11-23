@@ -12,7 +12,9 @@ import (
 
 	"github.com/jd-boyd/filesonthego/config"
 	"github.com/jd-boyd/filesonthego/handlers"
+	"github.com/jd-boyd/filesonthego/middleware"
 	_ "github.com/jd-boyd/filesonthego/migrations" // Import migrations for side effects
+	"github.com/jd-boyd/filesonthego/services"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -54,9 +56,22 @@ func main() {
 	}
 	logger.Info().Msg("Templates loaded successfully")
 
+	// Initialize metrics service
+	metricsService := services.NewMetricsService()
+
 	// Set up health check endpoint and routes
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		e := se
+
+		// Register metrics middleware to track all HTTP requests
+		e.Router.BindFunc(middleware.MetricsMiddleware(metricsService))
+
+		// Metrics endpoint for Prometheus scraping
+		e.Router.GET("/metrics", func(c *core.RequestEvent) error {
+			c.Response.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+			return c.String(200, metricsService.GetMetrics())
+		})
+
 		// Health check endpoint
 		e.Router.GET("/api/health", func(c *core.RequestEvent) error {
 			return c.JSON(200, map[string]interface{}{
@@ -129,9 +144,9 @@ func main() {
 
 		// Use PocketBase's built-in serve function which handles TLS properly
 		if err := apis.Serve(app, apis.ServeConfig{
-			ShowStartBanner: false, // We have our own logging
-			HttpAddr:        httpAddr,
-			HttpsAddr:       httpsAddr,
+			ShowStartBanner:    false, // We have our own logging
+			HttpAddr:           httpAddr,
+			HttpsAddr:          httpsAddr,
 			CertificateDomains: certificateDomains,
 		}); err != nil {
 			errChan <- fmt.Errorf("failed to start server: %w", err)
