@@ -82,13 +82,17 @@ func (m *MetricsService) RecordHTTPRequest(method, path string, statusCode int, 
 // RecordFileUpload records a file upload event.
 func (m *MetricsService) RecordFileUpload(sizeBytes int64) {
 	atomic.AddUint64(&m.fileUploadsTotal, 1)
-	atomic.AddUint64(&m.uploadBytesTotal, uint64(sizeBytes))
+	if sizeBytes > 0 {
+		atomic.AddUint64(&m.uploadBytesTotal, uint64(sizeBytes))
+	}
 }
 
 // RecordFileDownload records a file download event.
 func (m *MetricsService) RecordFileDownload(sizeBytes int64) {
 	atomic.AddUint64(&m.fileDownloadsTotal, 1)
-	atomic.AddUint64(&m.downloadBytesTotal, uint64(sizeBytes))
+	if sizeBytes > 0 {
+		atomic.AddUint64(&m.downloadBytesTotal, uint64(sizeBytes))
+	}
 }
 
 // RecordShareAccess records a share link access.
