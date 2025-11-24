@@ -2,7 +2,7 @@
 # Multi-stage build for Go application
 
 # Build stage
-FROM docker.io/golang:1.24-alpine AS builder
+FROM docker.io/golang:1.24.7-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
