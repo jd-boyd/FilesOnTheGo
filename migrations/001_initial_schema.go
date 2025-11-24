@@ -76,31 +76,33 @@ func init() {
 			},
 		)
 
-		// Add parent_directory field - will be updated after collection creation
+		// Create indexes for directories (excluding parent_directory for now)
+		directoriesCollection.Indexes = []string{
+			"CREATE INDEX idx_directories_user_path ON directories (user, path)",
+			"CREATE INDEX idx_directories_path ON directories (path)",
+		}
+
+		// First save without the self-referential field
+		if err := txApp.Save(directoriesCollection); err != nil {
+			return err
+		}
+
+		// Now add the self-referential parent_directory field with the collection ID
 		directoriesCollection.Fields.Add(
 			&core.RelationField{
 				Name:          "parent_directory",
 				Required:      false,
-				CollectionId:  "", // Will be set after creation
+				CollectionId:  directoriesCollection.Id,
 				CascadeDelete: true,
 				MaxSelect:     1,
 			},
 		)
 
-		// Create indexes for directories
-		directoriesCollection.Indexes = []string{
-			"CREATE INDEX idx_directories_user_path ON directories (user, path)",
+		// Add index for parent_directory
+		directoriesCollection.Indexes = append(directoriesCollection.Indexes,
 			"CREATE INDEX idx_directories_user_parent ON directories (user, parent_directory)",
-			"CREATE INDEX idx_directories_path ON directories (path)",
-		}
+		)
 
-		if err := txApp.Save(directoriesCollection); err != nil {
-			return err
-		}
-
-		// Update parent_directory relation to reference itself
-		parentDirField := directoriesCollection.Fields.GetByName("parent_directory").(*core.RelationField)
-		parentDirField.CollectionId = directoriesCollection.Id
 		if err := txApp.Save(directoriesCollection); err != nil {
 			return err
 		}

@@ -38,9 +38,9 @@ WORKDIR /app
 # Copy binary from builder stage
 COPY --from=builder /app/filesonthego .
 
-# Copy templates and static files
-COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/static ./static
+# Note: Templates and static files are now embedded in the binary via go:embed
+# No need to copy them separately. If you need external assets for development,
+# use the -external-assets flag and mount the assets directory.
 
 # Create data directory for PocketBase
 RUN mkdir -p /app/data && \

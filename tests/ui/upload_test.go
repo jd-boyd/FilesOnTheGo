@@ -14,9 +14,9 @@ func findStaticDir(t *testing.T) string {
 	t.Helper()
 
 	paths := []string{
-		"../../static",
-		"../static",
-		"static",
+		"../../assets/static",
+		"../assets/static",
+		"assets/static",
 	}
 
 	for _, p := range paths {

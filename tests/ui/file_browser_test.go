@@ -65,9 +65,9 @@ func findTemplateDir(t *testing.T) string {
 
 	// Try relative paths
 	paths := []string{
-		"../../templates",
-		"../templates",
-		"templates",
+		"../../assets/templates",
+		"../assets/templates",
+		"assets/templates",
 	}
 
 	for _, p := range paths {
@@ -170,9 +170,9 @@ func TestFilesPageTemplateExists(t *testing.T) {
 func TestFileBrowserJSExists(t *testing.T) {
 	// Find static directory
 	paths := []string{
-		"../../static/js/file-browser.js",
-		"../static/js/file-browser.js",
-		"static/js/file-browser.js",
+		"../../assets/static/js/file-browser.js",
+		"../assets/static/js/file-browser.js",
+		"assets/static/js/file-browser.js",
 	}
 
 	found := false
@@ -389,9 +389,9 @@ func TestFilesPageContainsRequiredElements(t *testing.T) {
 func TestFileBrowserJSContainsRequiredFunctions(t *testing.T) {
 	// Find the JS file
 	paths := []string{
-		"../../static/js/file-browser.js",
-		"../static/js/file-browser.js",
-		"static/js/file-browser.js",
+		"../../assets/static/js/file-browser.js",
+		"../assets/static/js/file-browser.js",
+		"assets/static/js/file-browser.js",
 	}
 
 	var content []byte
@@ -455,9 +455,9 @@ func TestFileBrowserJSContainsRequiredFunctions(t *testing.T) {
 // TestFileBrowserJSKeyboardShortcuts tests that keyboard shortcuts are implemented
 func TestFileBrowserJSKeyboardShortcuts(t *testing.T) {
 	paths := []string{
-		"../../static/js/file-browser.js",
-		"../static/js/file-browser.js",
-		"static/js/file-browser.js",
+		"../../assets/static/js/file-browser.js",
+		"../assets/static/js/file-browser.js",
+		"assets/static/js/file-browser.js",
 	}
 
 	var content []byte
@@ -492,9 +492,9 @@ func TestFileBrowserJSKeyboardShortcuts(t *testing.T) {
 // TestFileBrowserJSStateManagement tests state management is implemented
 func TestFileBrowserJSStateManagement(t *testing.T) {
 	paths := []string{
-		"../../static/js/file-browser.js",
-		"../static/js/file-browser.js",
-		"static/js/file-browser.js",
+		"../../assets/static/js/file-browser.js",
+		"../assets/static/js/file-browser.js",
+		"assets/static/js/file-browser.js",
 	}
 
 	var content []byte
@@ -529,9 +529,9 @@ func TestFileBrowserJSStateManagement(t *testing.T) {
 // TestFileBrowserJSHTMXIntegration tests HTMX integration
 func TestFileBrowserJSHTMXIntegration(t *testing.T) {
 	paths := []string{
-		"../../static/js/file-browser.js",
-		"../static/js/file-browser.js",
-		"static/js/file-browser.js",
+		"../../assets/static/js/file-browser.js",
+		"../assets/static/js/file-browser.js",
+		"assets/static/js/file-browser.js",
 	}
 
 	var content []byte
@@ -564,9 +564,9 @@ func TestFileBrowserJSHTMXIntegration(t *testing.T) {
 // TestFileBrowserJSAccessibility tests accessibility features
 func TestFileBrowserJSAccessibility(t *testing.T) {
 	paths := []string{
-		"../../static/js/file-browser.js",
-		"../static/js/file-browser.js",
-		"static/js/file-browser.js",
+		"../../assets/static/js/file-browser.js",
+		"../assets/static/js/file-browser.js",
+		"assets/static/js/file-browser.js",
 	}
 
 	var content []byte

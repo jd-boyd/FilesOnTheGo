@@ -4,6 +4,7 @@ import (
 	"errors"
 	"html/template"
 	"io"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -45,13 +46,22 @@ type TemplateRenderer struct {
 	templates map[string]*template.Template
 	mu        sync.RWMutex
 	baseDir   string
+	fsys      fs.FS // filesystem for loading templates (nil means use baseDir)
 }
 
-// NewTemplateRenderer creates a new template renderer
+// NewTemplateRenderer creates a new template renderer using filesystem path
 func NewTemplateRenderer(baseDir string) *TemplateRenderer {
 	return &TemplateRenderer{
 		templates: make(map[string]*template.Template),
 		baseDir:   baseDir,
+	}
+}
+
+// NewTemplateRendererFromFS creates a new template renderer using an fs.FS
+func NewTemplateRendererFromFS(fsys fs.FS) *TemplateRenderer {
+	return &TemplateRenderer{
+		templates: make(map[string]*template.Template),
+		fsys:      fsys,
 	}
 }
 
@@ -70,39 +80,47 @@ func (r *TemplateRenderer) LoadTemplates() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Define template files to load
+	// Define template files to load (paths are relative to templates root when using fs.FS)
 	templates := map[string][]string{
 		"login": {
-			"templates/layouts/base.html",
-			"templates/layouts/auth.html",
-			"templates/pages/login.html",
+			"layouts/base.html",
+			"layouts/auth.html",
+			"pages/login.html",
 		},
 		"register": {
-			"templates/layouts/base.html",
-			"templates/layouts/auth.html",
-			"templates/pages/register.html",
+			"layouts/base.html",
+			"layouts/auth.html",
+			"pages/register.html",
 		},
 		"dashboard": {
-			"templates/layouts/base.html",
-			"templates/layouts/app.html",
-			"templates/components/header.html",
-			"templates/components/breadcrumb.html",
-			"templates/components/loading.html",
-			"templates/pages/dashboard.html",
+			"layouts/base.html",
+			"layouts/app.html",
+			"components/header.html",
+			"components/breadcrumb.html",
+			"components/loading.html",
+			"pages/dashboard.html",
 		},
 	}
 
 	// Load each template set
 	for name, files := range templates {
-		// Prepend base directory to file paths
-		fullPaths := make([]string, len(files))
-		for i, file := range files {
-			fullPaths[i] = filepath.Join(r.baseDir, file)
+		var tmpl *template.Template
+		var err error
+
+		if r.fsys != nil {
+			// Load from fs.FS
+			tmpl = template.New(name).Funcs(getTemplateFuncs())
+			tmpl, err = tmpl.ParseFS(r.fsys, files...)
+		} else {
+			// Load from filesystem path (legacy mode)
+			fullPaths := make([]string, len(files))
+			for i, file := range files {
+				fullPaths[i] = filepath.Join(r.baseDir, "templates", file)
+			}
+			tmpl = template.New(name).Funcs(getTemplateFuncs())
+			tmpl, err = tmpl.ParseFiles(fullPaths...)
 		}
 
-		// Parse templates with custom functions
-		tmpl := template.New(name).Funcs(getTemplateFuncs())
-		tmpl, err := tmpl.ParseFiles(fullPaths...)
 		if err != nil {
 			return err
 		}

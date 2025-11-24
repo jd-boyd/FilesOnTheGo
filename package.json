@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Self-hosted file storage and sharing service",
   "scripts": {
-    "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
-    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch"
+    "build:css": "tailwindcss -i ./assets/static/css/input.css -o ./assets/static/css/output.css --minify",
+    "watch:css": "tailwindcss -i ./assets/static/css/input.css -o ./assets/static/css/output.css --watch"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.0"

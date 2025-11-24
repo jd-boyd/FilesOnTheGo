@@ -101,6 +101,11 @@ fi
 mkdir -p $MINIO_DATA
 mkdir -p $APP_DATA
 
+# Set permissions for container user (uid 1001)
+# The container runs as appuser (uid 1001), so the data directory needs to be writable
+podman unshare chown -R 1001:1001 $APP_DATA 2>/dev/null || \
+    chmod -R 777 $APP_DATA
+
 # Clean up existing pod and create new one
 echo "Setting up test Podman pod..."
 podman pod rm -f $POD_NAME && /bin/true

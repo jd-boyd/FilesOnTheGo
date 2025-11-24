@@ -103,6 +103,7 @@ echo "Starting FilesOnTheGo application..."
 podman run -d \
        --pod $POD_NAME \
        -v $APP_DATA:/app/data \
+       -v "$(pwd)":/app:ro \
        -e APP_PORT=${APP_PORT} \
        -e APP_ENVIRONMENT=${APP_ENVIRONMENT} \
        -e APP_URL=${APP_URL} \

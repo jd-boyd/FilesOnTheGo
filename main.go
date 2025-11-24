@@ -3,13 +3,16 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/jd-boyd/filesonthego/assets"
 	"github.com/jd-boyd/filesonthego/config"
 	"github.com/jd-boyd/filesonthego/handlers"
 	"github.com/jd-boyd/filesonthego/middleware"
@@ -22,6 +25,17 @@ import (
 )
 
 func main() {
+	// Parse CLI flags
+	useExternalAssets := flag.Bool("external-assets", false, "Use external filesystem for templates and static files instead of embedded assets")
+	assetsDir := flag.String("assets-dir", ".", "Base directory for external assets (only used with -external-assets)")
+	flag.Parse()
+
+	// Configure assets based on CLI flags
+	if *useExternalAssets {
+		assets.UseEmbedded = false
+		assets.SetBaseDir(*assetsDir)
+	}
+
 	// Load configuration from environment variables
 	cfg, err := config.Load()
 	if err != nil {
@@ -31,6 +45,13 @@ func main() {
 	// Initialize structured logging with zerolog
 	logger := initLogger(cfg)
 	logger.Info().Msg("Starting FilesOnTheGo application")
+
+	// Log asset mode
+	if *useExternalAssets {
+		logger.Info().Str("assets_dir", *assetsDir).Msg("Using external assets from filesystem")
+	} else {
+		logger.Info().Msg("Using embedded assets")
+	}
 
 	// Create PocketBase instance with data directory
 	app := pocketbase.NewWithConfig(pocketbase.Config{
@@ -49,12 +70,22 @@ func main() {
 		Bool("letsencrypt_enabled", cfg.LetsEncryptEnabled).
 		Msg("Configuration loaded")
 
-	// Initialize template renderer
-	templateRenderer := handlers.NewTemplateRenderer(".")
+	// Initialize template renderer using assets filesystem
+	templatesFS, err := assets.TemplatesFS()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to get templates filesystem")
+	}
+	templateRenderer := handlers.NewTemplateRendererFromFS(templatesFS)
 	if err := templateRenderer.LoadTemplates(); err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load templates")
 	}
 	logger.Info().Msg("Templates loaded successfully")
+
+	// Get static files filesystem for serving
+	staticFS, err := assets.StaticFS()
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to get static filesystem")
+	}
 
 	// Initialize metrics service
 	metricsService := services.NewMetricsService()
@@ -81,8 +112,13 @@ func main() {
 			})
 		})
 
-		// Serve static files - using the built-in static file handler
-		// PocketBase's static file serving will be configured separately
+		// Serve static files from assets filesystem
+		staticHandler := http.FileServer(http.FS(staticFS))
+		e.Router.GET("/static/{path...}", func(c *core.RequestEvent) error {
+			// Strip the /static prefix and serve from staticFS
+			http.StripPrefix("/static", staticHandler).ServeHTTP(c.Response, c.Request)
+			return nil
+		})
 
 		// Initialize auth handler
 		authHandler := handlers.NewAuthHandler(app, templateRenderer, logger)

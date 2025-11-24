@@ -2,38 +2,35 @@ package unit
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/jd-boyd/filesonthego/assets"
 	"github.com/jd-boyd/filesonthego/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestTemplateRenderer_LoadTemplates(t *testing.T) {
-	// Get project root directory
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err, "Failed to get project root")
+// getTemplateRenderer returns a template renderer using embedded assets
+func getTemplateRenderer(t *testing.T) *handlers.TemplateRenderer {
+	t.Helper()
+	templatesFS, err := assets.TemplatesFS()
+	require.NoError(t, err, "Failed to get templates filesystem")
+	return handlers.NewTemplateRendererFromFS(templatesFS)
+}
 
-	// Create template renderer
-	renderer := handlers.NewTemplateRenderer(projectRoot)
+func TestTemplateRenderer_LoadTemplates(t *testing.T) {
+	renderer := getTemplateRenderer(t)
 
 	// Test loading templates
-	err = renderer.LoadTemplates()
+	err := renderer.LoadTemplates()
 	require.NoError(t, err, "Failed to load templates")
 }
 
 func TestTemplateRenderer_RenderLogin(t *testing.T) {
-	// Get project root directory
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err, "Failed to get project root")
-
-	// Create template renderer
-	renderer := handlers.NewTemplateRenderer(projectRoot)
+	renderer := getTemplateRenderer(t)
 
 	// Load templates
-	err = renderer.LoadTemplates()
+	err := renderer.LoadTemplates()
 	require.NoError(t, err, "Failed to load templates")
 
 	// Prepare test data
@@ -55,15 +52,10 @@ func TestTemplateRenderer_RenderLogin(t *testing.T) {
 }
 
 func TestTemplateRenderer_RenderRegister(t *testing.T) {
-	// Get project root directory
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err, "Failed to get project root")
-
-	// Create template renderer
-	renderer := handlers.NewTemplateRenderer(projectRoot)
+	renderer := getTemplateRenderer(t)
 
 	// Load templates
-	err = renderer.LoadTemplates()
+	err := renderer.LoadTemplates()
 	require.NoError(t, err, "Failed to load templates")
 
 	// Prepare test data
@@ -86,15 +78,10 @@ func TestTemplateRenderer_RenderRegister(t *testing.T) {
 }
 
 func TestTemplateRenderer_RenderDashboard(t *testing.T) {
-	// Get project root directory
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err, "Failed to get project root")
-
-	// Create template renderer
-	renderer := handlers.NewTemplateRenderer(projectRoot)
+	renderer := getTemplateRenderer(t)
 
 	// Load templates
-	err = renderer.LoadTemplates()
+	err := renderer.LoadTemplates()
 	require.NoError(t, err, "Failed to load templates")
 
 	// Prepare test data
@@ -119,15 +106,10 @@ func TestTemplateRenderer_RenderDashboard(t *testing.T) {
 }
 
 func TestTemplateRenderer_RenderNonExistent(t *testing.T) {
-	// Get project root directory
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err, "Failed to get project root")
-
-	// Create template renderer
-	renderer := handlers.NewTemplateRenderer(projectRoot)
+	renderer := getTemplateRenderer(t)
 
 	// Load templates
-	err = renderer.LoadTemplates()
+	err := renderer.LoadTemplates()
 	require.NoError(t, err, "Failed to load templates")
 
 	// Try to render non-existent template
@@ -141,28 +123,4 @@ func TestPrepareTemplateData(t *testing.T) {
 	// For now, we just test that the function exists and can be called
 	// Full integration tests will be in the integration test suite
 	t.Skip("Skipping PrepareTemplateData test - requires mock RequestEvent")
-}
-
-// Helper function to get project root directory
-func getProjectRoot() (string, error) {
-	// Start from current directory and walk up until we find go.mod
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		// Check if go.mod exists in current directory
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-
-		// Move up one directory
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached root directory without finding go.mod
-			return "", os.ErrNotExist
-		}
-		dir = parent
-	}
 }

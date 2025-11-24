@@ -2,42 +2,27 @@ package integration
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/jd-boyd/filesonthego/assets"
 	"github.com/jd-boyd/filesonthego/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// getProjectRoot returns the path to the project root directory
-func getProjectRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", os.ErrNotExist
-		}
-		dir = parent
-	}
+// getTemplateRenderer returns a template renderer using embedded assets
+func getTemplateRenderer(t *testing.T) *handlers.TemplateRenderer {
+	t.Helper()
+	templatesFS, err := assets.TemplatesFS()
+	require.NoError(t, err, "Failed to get templates filesystem")
+	return handlers.NewTemplateRendererFromFS(templatesFS)
 }
 
 // TestUITemplates_AllTemplatesRender tests that all UI templates render without errors
 func TestUITemplates_AllTemplatesRender(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err, "Failed to find project root")
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err, "Failed to load templates")
 
 	testCases := []struct {
@@ -98,11 +83,8 @@ func TestUITemplates_AllTemplatesRender(t *testing.T) {
 
 // TestUITemplates_HTMLStructure tests that templates produce valid HTML structure
 func TestUITemplates_HTMLStructure(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	templates := map[string]*handlers.TemplateData{
@@ -140,11 +122,8 @@ func TestUITemplates_HTMLStructure(t *testing.T) {
 
 // TestUITemplates_RequiredResources tests that templates include required resources
 func TestUITemplates_RequiredResources(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	templates := []string{"login", "register", "dashboard"}
@@ -174,11 +153,8 @@ func TestUITemplates_RequiredResources(t *testing.T) {
 
 // TestUITemplates_AccessibilityFeatures tests for basic accessibility features
 func TestUITemplates_AccessibilityFeatures(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	t.Run("login page accessibility", func(t *testing.T) {
@@ -218,11 +194,8 @@ func TestUITemplates_AccessibilityFeatures(t *testing.T) {
 
 // TestUITemplates_HTMXAttributes tests for proper HTMX attributes
 func TestUITemplates_HTMXAttributes(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	t.Run("login form HTMX", func(t *testing.T) {
@@ -254,11 +227,8 @@ func TestUITemplates_HTMXAttributes(t *testing.T) {
 
 // TestUITemplates_ResponsiveClasses tests for Tailwind responsive classes
 func TestUITemplates_ResponsiveClasses(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	templates := []string{"login", "register", "dashboard"}
@@ -284,11 +254,8 @@ func TestUITemplates_ResponsiveClasses(t *testing.T) {
 
 // TestUITemplates_SecurityHeaders tests for security-related HTML elements
 func TestUITemplates_SecurityHeaders(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	t.Run("login security features", func(t *testing.T) {
@@ -323,11 +290,8 @@ func TestUITemplates_SecurityHeaders(t *testing.T) {
 
 // TestUITemplates_ToastContainer tests for toast notification container
 func TestUITemplates_ToastContainer(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	templates := []string{"login", "register", "dashboard"}
@@ -348,11 +312,8 @@ func TestUITemplates_ToastContainer(t *testing.T) {
 
 // TestUITemplates_EmptyState tests the dashboard empty state rendering
 func TestUITemplates_EmptyState(t *testing.T) {
-	projectRoot, err := getProjectRoot()
-	require.NoError(t, err)
-
-	renderer := handlers.NewTemplateRenderer(projectRoot)
-	err = renderer.LoadTemplates()
+	renderer := getTemplateRenderer(t)
+	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
 	t.Run("empty state message", func(t *testing.T) {

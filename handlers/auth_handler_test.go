@@ -4,30 +4,19 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/jd-boyd/filesonthego/assets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// getProjectRoot returns the path to the project root directory
-func getProjectRoot(t *testing.T) string {
+// getTemplateRendererFromAssets returns a template renderer using embedded assets
+func getTemplateRendererFromAssets(t *testing.T) *TemplateRenderer {
 	t.Helper()
-	dir, err := os.Getwd()
-	require.NoError(t, err)
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("Failed to find project root")
-		}
-		dir = parent
-	}
+	templatesFS, err := assets.TemplatesFS()
+	require.NoError(t, err, "Failed to get templates filesystem")
+	return NewTemplateRendererFromFS(templatesFS)
 }
 
 // TestTemplateData tests the TemplateData struct
@@ -136,12 +125,17 @@ func TestTemplateRenderer_Creation(t *testing.T) {
 	assert.NotNil(t, renderer)
 	assert.Equal(t, ".", renderer.baseDir)
 	assert.NotNil(t, renderer.templates)
+
+	// Also test the FS-based constructor
+	rendererFromFS := getTemplateRendererFromAssets(t)
+	assert.NotNil(t, rendererFromFS)
+	assert.NotNil(t, rendererFromFS.templates)
+	assert.NotNil(t, rendererFromFS.fsys)
 }
 
 // TestTemplateRenderer_LoadAndRender tests loading and rendering templates
 func TestTemplateRenderer_LoadAndRender(t *testing.T) {
-	projectRoot := getProjectRoot(t)
-	renderer := NewTemplateRenderer(projectRoot)
+	renderer := getTemplateRendererFromAssets(t)
 
 	// Load templates
 	err := renderer.LoadTemplates()
