@@ -119,18 +119,49 @@ podman run -d \
 
 # Wait for MinIO to start
 echo "Waiting for MinIO to start..."
-sleep 3
+max_attempts=30
+attempt=1
+
+while [ $attempt -le $max_attempts ]; do
+    echo "Checking MinIO health (attempt $attempt/$max_attempts)..."
+
+    # Check if MinIO is responding to HTTP requests
+    if podman run --rm --pod $POD_NAME \
+       --entrypoint=/bin/sh \
+       quay.io/minio/mc -c "mc config host add myminio http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}" >/dev/null 2>&1; then
+        echo "MinIO is ready!"
+        break
+    fi
+
+    if [ $attempt -eq $max_attempts ]; then
+        echo "Error: MinIO failed to start after $max_attempts attempts"
+        echo "Cleaning up..."
+        podman pod rm -f $POD_NAME
+        exit 1
+    fi
+
+    echo "MinIO not ready yet, waiting 2 seconds..."
+    sleep 2
+    attempt=$((attempt + 1))
+done
 
 # Create MinIO bucket and set access policy
 echo "Setting up MinIO bucket..."
-podman run \
+if podman run \
        --pod $POD_NAME \
        --entrypoint=/bin/sh \
        quay.io/minio/mc -c "\
       /usr/bin/mc alias set myminio http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && \
       /usr/bin/mc mb --ignore-existing myminio/${MINIO_BUCKET} && \
       /usr/bin/mc anonymous set download myminio/${MINIO_BUCKET} && \
-      echo 'MinIO bucket setup complete'"
+      echo 'MinIO bucket setup complete'"; then
+    echo "✅ MinIO bucket setup completed successfully"
+else
+    echo "❌ Failed to set up MinIO bucket"
+    echo "Cleaning up..."
+    podman pod rm -f $POD_NAME
+    exit 1
+fi
 
 if [ "$skip" == 'true' ] ; then
     echo "Skipping container build..."
