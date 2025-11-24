@@ -1,113 +1,196 @@
 // Package config provides configuration management for FilesOnTheGo.
-// It handles environment variables, default values, and validation for application settings.
+// It supports configuration via YAML files and environment variables using Viper.
+// Environment variables take precedence over YAML file values.
 package config
 
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
+
+	"github.com/spf13/viper"
 )
 
-// Config holds all application configuration
+// Config holds all application configuration.
+// Values can be set via YAML file or environment variables.
+// Environment variables take precedence over YAML values.
 type Config struct {
 	// S3 Configuration
-	S3Endpoint  string
-	S3Region    string
-	S3Bucket    string
-	S3AccessKey string
-	S3SecretKey string
-	S3UseSSL    bool
+	S3Endpoint  string `mapstructure:"s3_endpoint"`
+	S3Region    string `mapstructure:"s3_region"`
+	S3Bucket    string `mapstructure:"s3_bucket"`
+	S3AccessKey string `mapstructure:"s3_access_key"`
+	S3SecretKey string `mapstructure:"s3_secret_key"`
+	S3UseSSL    bool   `mapstructure:"s3_use_ssl"`
 
 	// Application Configuration
-	AppPort        string
-	AppEnvironment string
-	AppURL         string
+	AppPort        string `mapstructure:"app_port"`
+	AppEnvironment string `mapstructure:"app_environment"`
+	AppURL         string `mapstructure:"app_url"`
 
 	// Database Configuration
-	DBPath string
+	DBPath string `mapstructure:"db_path"`
 
 	// Upload Configuration
-	MaxUploadSize int64 // in bytes
+	MaxUploadSize int64 `mapstructure:"max_upload_size"` // in bytes
 
 	// Security Configuration
-	JWTSecret string
+	JWTSecret string `mapstructure:"jwt_secret"`
 
 	// Feature Flags
-	PublicRegistration bool
-	EmailVerification  bool
-	RequireEmailAuth   bool
+	PublicRegistration bool `mapstructure:"public_registration"`
+	EmailVerification  bool `mapstructure:"email_verification"`
+	RequireEmailAuth   bool `mapstructure:"require_email_auth"`
 
 	// User Quota Configuration
-	DefaultUserQuota int64 // in bytes, 0 means unlimited
+	DefaultUserQuota int64 `mapstructure:"default_user_quota"` // in bytes, 0 means unlimited
 
 	// TLS Configuration
-	TLSEnabled  bool   // Enable HTTPS
-	TLSPort     string // HTTPS port (default: 443)
-	TLSCertFile string // Path to TLS certificate file
-	TLSKeyFile  string // Path to TLS private key file
-	TLSRedirect bool   // Redirect HTTP to HTTPS
+	TLSEnabled  bool   `mapstructure:"tls_enabled"`   // Enable HTTPS
+	TLSPort     string `mapstructure:"tls_port"`      // HTTPS port (default: 443)
+	TLSCertFile string `mapstructure:"tls_cert_file"` // Path to TLS certificate file
+	TLSKeyFile  string `mapstructure:"tls_key_file"`  // Path to TLS private key file
+	TLSRedirect bool   `mapstructure:"tls_redirect"`  // Redirect HTTP to HTTPS
 
 	// Let's Encrypt Configuration
-	LetsEncryptEnabled bool   // Enable automatic Let's Encrypt certificates
-	LetsEncryptDomain  string // Domain for Let's Encrypt certificate
-	LetsEncryptEmail   string // Email for Let's Encrypt account notifications
-	LetsEncryptCache   string // Cache directory for ACME certificates
+	LetsEncryptEnabled bool   `mapstructure:"letsencrypt_enabled"` // Enable automatic Let's Encrypt certificates
+	LetsEncryptDomain  string `mapstructure:"letsencrypt_domain"`  // Domain for Let's Encrypt certificate
+	LetsEncryptEmail   string `mapstructure:"letsencrypt_email"`   // Email for Let's Encrypt account notifications
+	LetsEncryptCache   string `mapstructure:"letsencrypt_cache"`   // Cache directory for ACME certificates
 }
 
-// Load reads configuration from environment variables and returns a Config struct
+// Load reads configuration from YAML file and environment variables.
+// It searches for config.yaml in current directory and /etc/filesonthego/,
+// then applies environment variable overrides. ENV vars always take precedence.
 func Load() (*Config, error) {
-	cfg := &Config{
-		// S3 Configuration
-		S3Endpoint:  getEnv("S3_ENDPOINT", ""),
-		S3Region:    getEnv("S3_REGION", "us-east-1"),
-		S3Bucket:    getEnv("S3_BUCKET", ""),
-		S3AccessKey: getEnv("S3_ACCESS_KEY", ""),
-		S3SecretKey: getEnv("S3_SECRET_KEY", ""),
-		S3UseSSL:    getEnvBool("S3_USE_SSL", true),
+	return LoadWithPath("")
+}
 
-		// Application Configuration
-		AppPort:        getEnv("APP_PORT", "8090"),
-		AppEnvironment: getEnv("APP_ENVIRONMENT", "development"),
-		AppURL:         getEnv("APP_URL", "http://localhost:8090"),
+// LoadWithPath loads configuration from a specific YAML file path.
+// If path is empty, it searches default locations.
+// Environment variables always override YAML values.
+func LoadWithPath(configPath string) (*Config, error) {
+	v := viper.New()
 
-		// Database Configuration
-		DBPath: getEnv("DB_PATH", "./pb_data"),
+	// Set defaults
+	setDefaults(v)
 
-		// Upload Configuration
-		MaxUploadSize: getEnvInt64("MAX_UPLOAD_SIZE", 100*1024*1024), // Default: 100MB
+	// Bind environment variables explicitly (Viper needs this for mapstructure tags)
+	bindEnvVars(v)
 
-		// Security Configuration
-		JWTSecret: getEnv("JWT_SECRET", ""),
+	// Configure Viper for YAML
+	v.SetConfigType("yaml")
 
-		// Feature Flags
-		PublicRegistration: getEnvBool("PUBLIC_REGISTRATION", true),
-		EmailVerification:  getEnvBool("EMAIL_VERIFICATION", false),
-		RequireEmailAuth:   getEnvBool("REQUIRE_EMAIL_AUTH", true),
-
-		// User Quota Configuration
-		DefaultUserQuota: getEnvInt64("DEFAULT_USER_QUOTA", 10*1024*1024*1024), // Default: 10GB
-
-		// TLS Configuration
-		TLSEnabled:  getEnvBool("TLS_ENABLED", false),
-		TLSPort:     getEnv("TLS_PORT", "443"),
-		TLSCertFile: getEnv("TLS_CERT_FILE", ""),
-		TLSKeyFile:  getEnv("TLS_KEY_FILE", ""),
-		TLSRedirect: getEnvBool("TLS_REDIRECT", true),
-
-		// Let's Encrypt Configuration
-		LetsEncryptEnabled: getEnvBool("LETSENCRYPT_ENABLED", false),
-		LetsEncryptDomain:  getEnv("LETSENCRYPT_DOMAIN", ""),
-		LetsEncryptEmail:   getEnv("LETSENCRYPT_EMAIL", ""),
-		LetsEncryptCache:   getEnv("LETSENCRYPT_CACHE", "./certs"),
+	if configPath != "" {
+		v.SetConfigFile(configPath)
+	} else {
+		v.SetConfigName("config")
+		v.AddConfigPath(".")
+		v.AddConfigPath("/etc/filesonthego/")
 	}
 
-	// Validate the configuration
+	// Read config file (not required to exist)
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			// Only return error if file was found but couldn't be parsed
+			if configPath != "" {
+				return nil, fmt.Errorf("failed to read config file: %w", err)
+			}
+		}
+	}
+
+	// Unmarshal into Config struct
+	cfg := &Config{}
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Validate
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
 	return cfg, nil
+}
+
+// bindEnvVars explicitly binds environment variables to config keys
+func bindEnvVars(v *viper.Viper) {
+	// S3 Configuration
+	v.BindEnv("s3_endpoint", "S3_ENDPOINT")
+	v.BindEnv("s3_region", "S3_REGION")
+	v.BindEnv("s3_bucket", "S3_BUCKET")
+	v.BindEnv("s3_access_key", "S3_ACCESS_KEY")
+	v.BindEnv("s3_secret_key", "S3_SECRET_KEY")
+	v.BindEnv("s3_use_ssl", "S3_USE_SSL")
+
+	// Application Configuration
+	v.BindEnv("app_port", "APP_PORT")
+	v.BindEnv("app_environment", "APP_ENVIRONMENT")
+	v.BindEnv("app_url", "APP_URL")
+
+	// Database Configuration
+	v.BindEnv("db_path", "DB_PATH")
+
+	// Upload Configuration
+	v.BindEnv("max_upload_size", "MAX_UPLOAD_SIZE")
+
+	// Security Configuration
+	v.BindEnv("jwt_secret", "JWT_SECRET")
+
+	// Feature Flags
+	v.BindEnv("public_registration", "PUBLIC_REGISTRATION")
+	v.BindEnv("email_verification", "EMAIL_VERIFICATION")
+	v.BindEnv("require_email_auth", "REQUIRE_EMAIL_AUTH")
+
+	// User Quota Configuration
+	v.BindEnv("default_user_quota", "DEFAULT_USER_QUOTA")
+
+	// TLS Configuration
+	v.BindEnv("tls_enabled", "TLS_ENABLED")
+	v.BindEnv("tls_port", "TLS_PORT")
+	v.BindEnv("tls_cert_file", "TLS_CERT_FILE")
+	v.BindEnv("tls_key_file", "TLS_KEY_FILE")
+	v.BindEnv("tls_redirect", "TLS_REDIRECT")
+
+	// Let's Encrypt Configuration
+	v.BindEnv("letsencrypt_enabled", "LETSENCRYPT_ENABLED")
+	v.BindEnv("letsencrypt_domain", "LETSENCRYPT_DOMAIN")
+	v.BindEnv("letsencrypt_email", "LETSENCRYPT_EMAIL")
+	v.BindEnv("letsencrypt_cache", "LETSENCRYPT_CACHE")
+}
+
+// setDefaults sets default values for all configuration options
+func setDefaults(v *viper.Viper) {
+	// S3 Configuration
+	v.SetDefault("s3_region", "us-east-1")
+	v.SetDefault("s3_use_ssl", true)
+
+	// Application Configuration
+	v.SetDefault("app_port", "8090")
+	v.SetDefault("app_environment", "development")
+	v.SetDefault("app_url", "http://localhost:8090")
+
+	// Database Configuration
+	v.SetDefault("db_path", "./pb_data")
+
+	// Upload Configuration
+	v.SetDefault("max_upload_size", 100*1024*1024) // 100MB
+
+	// Feature Flags
+	v.SetDefault("public_registration", true)
+	v.SetDefault("email_verification", false)
+	v.SetDefault("require_email_auth", true)
+
+	// User Quota Configuration
+	v.SetDefault("default_user_quota", 10*1024*1024*1024) // 10GB
+
+	// TLS Configuration
+	v.SetDefault("tls_enabled", false)
+	v.SetDefault("tls_port", "443")
+	v.SetDefault("tls_redirect", true)
+
+	// Let's Encrypt Configuration
+	v.SetDefault("letsencrypt_enabled", false)
+	v.SetDefault("letsencrypt_cache", "./certs")
 }
 
 // Validate checks if the configuration is valid
@@ -207,38 +290,4 @@ func (c *Config) UsesLetsEncrypt() bool {
 // UsesCertificateFiles returns true if TLS is enabled with manual certificate files
 func (c *Config) UsesCertificateFiles() bool {
 	return c.TLSEnabled && !c.LetsEncryptEnabled && c.TLSCertFile != "" && c.TLSKeyFile != ""
-}
-
-// Helper functions for reading environment variables
-
-// getEnv reads an environment variable or returns a default value
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// getEnvBool reads a boolean environment variable or returns a default value
-func getEnvBool(key string, defaultValue bool) bool {
-	if value := os.Getenv(key); value != "" {
-		boolValue, err := strconv.ParseBool(value)
-		if err != nil {
-			return defaultValue
-		}
-		return boolValue
-	}
-	return defaultValue
-}
-
-// getEnvInt64 reads an int64 environment variable or returns a default value
-func getEnvInt64(key string, defaultValue int64) int64 {
-	if value := os.Getenv(key); value != "" {
-		intValue, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return defaultValue
-		}
-		return intValue
-	}
-	return defaultValue
 }

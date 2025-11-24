@@ -2,9 +2,11 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoad_WithValidConfig(t *testing.T) {
@@ -195,102 +197,6 @@ func TestIsProduction_ReturnsTrueInProduction(t *testing.T) {
 	assert.False(t, cfg.IsDevelopment())
 }
 
-func TestGetEnvBool_ParsesTrue(t *testing.T) {
-	// Arrange
-	os.Setenv("TEST_BOOL_TRUE", "true")
-	defer os.Unsetenv("TEST_BOOL_TRUE")
-
-	// Act
-	result := getEnvBool("TEST_BOOL_TRUE", false)
-
-	// Assert
-	assert.True(t, result)
-}
-
-func TestGetEnvBool_ParsesFalse(t *testing.T) {
-	// Arrange
-	os.Setenv("TEST_BOOL_FALSE", "false")
-	defer os.Unsetenv("TEST_BOOL_FALSE")
-
-	// Act
-	result := getEnvBool("TEST_BOOL_FALSE", true)
-
-	// Assert
-	assert.False(t, result)
-}
-
-func TestGetEnvBool_UsesDefaultOnInvalid(t *testing.T) {
-	// Arrange
-	os.Setenv("TEST_BOOL_INVALID", "not-a-bool")
-	defer os.Unsetenv("TEST_BOOL_INVALID")
-
-	// Act
-	result := getEnvBool("TEST_BOOL_INVALID", true)
-
-	// Assert
-	assert.True(t, result)
-}
-
-func TestGetEnvBool_UsesDefaultWhenUnset(t *testing.T) {
-	// Act
-	result := getEnvBool("UNSET_BOOL_VAR", true)
-
-	// Assert
-	assert.True(t, result)
-}
-
-func TestGetEnvInt64_ParsesValue(t *testing.T) {
-	// Arrange
-	os.Setenv("TEST_INT64", "12345")
-	defer os.Unsetenv("TEST_INT64")
-
-	// Act
-	result := getEnvInt64("TEST_INT64", 0)
-
-	// Assert
-	assert.Equal(t, int64(12345), result)
-}
-
-func TestGetEnvInt64_UsesDefaultOnInvalid(t *testing.T) {
-	// Arrange
-	os.Setenv("TEST_INT64_INVALID", "not-a-number")
-	defer os.Unsetenv("TEST_INT64_INVALID")
-
-	// Act
-	result := getEnvInt64("TEST_INT64_INVALID", 999)
-
-	// Assert
-	assert.Equal(t, int64(999), result)
-}
-
-func TestGetEnvInt64_UsesDefaultWhenUnset(t *testing.T) {
-	// Act
-	result := getEnvInt64("UNSET_INT64_VAR", 999)
-
-	// Assert
-	assert.Equal(t, int64(999), result)
-}
-
-func TestGetEnv_ReturnsValue(t *testing.T) {
-	// Arrange
-	os.Setenv("TEST_STRING", "test-value")
-	defer os.Unsetenv("TEST_STRING")
-
-	// Act
-	result := getEnv("TEST_STRING", "default")
-
-	// Assert
-	assert.Equal(t, "test-value", result)
-}
-
-func TestGetEnv_UsesDefaultWhenUnset(t *testing.T) {
-	// Act
-	result := getEnv("UNSET_STRING_VAR", "default")
-
-	// Assert
-	assert.Equal(t, "default", result)
-}
-
 func TestLoad_DefaultValues(t *testing.T) {
 	// Arrange - clean environment first to avoid test pollution
 	cleanTestEnv(t)
@@ -317,6 +223,132 @@ func TestLoad_DefaultValues(t *testing.T) {
 	assert.Equal(t, true, cfg.PublicRegistration)                   // Default
 	assert.Equal(t, false, cfg.EmailVerification)                   // Default
 	assert.Equal(t, int64(10*1024*1024*1024), cfg.DefaultUserQuota) // Default 10GB
+}
+
+func TestLoadWithPath_LoadsYAMLFile(t *testing.T) {
+	// Arrange
+	cleanTestEnv(t)
+	defer cleanTestEnv(t)
+
+	// Create temp YAML config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	yamlContent := `
+s3_endpoint: http://yaml-minio:9000
+s3_bucket: yaml-bucket
+s3_access_key: yaml-key
+s3_secret_key: yaml-secret
+s3_region: eu-west-1
+app_port: "9090"
+app_url: http://localhost:9090
+`
+	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
+	require.NoError(t, err)
+
+	// Act
+	cfg, err := LoadWithPath(configPath)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "http://yaml-minio:9000", cfg.S3Endpoint)
+	assert.Equal(t, "yaml-bucket", cfg.S3Bucket)
+	assert.Equal(t, "yaml-key", cfg.S3AccessKey)
+	assert.Equal(t, "yaml-secret", cfg.S3SecretKey)
+	assert.Equal(t, "eu-west-1", cfg.S3Region)
+	assert.Equal(t, "9090", cfg.AppPort)
+}
+
+func TestLoadWithPath_EnvOverridesYAML(t *testing.T) {
+	// Arrange
+	cleanTestEnv(t)
+	defer cleanTestEnv(t)
+
+	// Create temp YAML config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	yamlContent := `
+s3_endpoint: http://yaml-minio:9000
+s3_bucket: yaml-bucket
+s3_access_key: yaml-key
+s3_secret_key: yaml-secret
+s3_region: eu-west-1
+app_port: "9090"
+app_url: http://localhost:9090
+`
+	err := os.WriteFile(configPath, []byte(yamlContent), 0644)
+	require.NoError(t, err)
+
+	// Set ENV override
+	os.Setenv("S3_ENDPOINT", "http://env-minio:9000")
+	os.Setenv("S3_REGION", "us-west-2")
+
+	// Act
+	cfg, err := LoadWithPath(configPath)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
+	// ENV overrides YAML
+	assert.Equal(t, "http://env-minio:9000", cfg.S3Endpoint)
+	assert.Equal(t, "us-west-2", cfg.S3Region)
+	// YAML values still used when not overridden
+	assert.Equal(t, "yaml-bucket", cfg.S3Bucket)
+	assert.Equal(t, "9090", cfg.AppPort)
+}
+
+func TestLoadWithPath_InvalidYAMLReturnsError(t *testing.T) {
+	// Arrange
+	cleanTestEnv(t)
+	defer cleanTestEnv(t)
+
+	// Create temp invalid YAML config file
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	invalidYAML := `
+s3_endpoint: [invalid yaml
+`
+	err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
+	require.NoError(t, err)
+
+	// Act
+	cfg, err := LoadWithPath(configPath)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, cfg)
+}
+
+func TestLoadWithPath_MissingFileReturnsError(t *testing.T) {
+	// Arrange
+	cleanTestEnv(t)
+	defer cleanTestEnv(t)
+
+	// Act
+	cfg, err := LoadWithPath("/nonexistent/config.yaml")
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, cfg)
+}
+
+func TestLoad_WorksWithoutConfigFile(t *testing.T) {
+	// Arrange - only use ENV, no config file
+	cleanTestEnv(t)
+	defer cleanTestEnv(t)
+
+	os.Setenv("S3_ENDPOINT", "http://minio:9000")
+	os.Setenv("S3_BUCKET", "test")
+	os.Setenv("S3_ACCESS_KEY", "key")
+	os.Setenv("S3_SECRET_KEY", "secret")
+
+	// Act
+	cfg, err := Load()
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "http://minio:9000", cfg.S3Endpoint)
 }
 
 // Helper function to set up test environment variables

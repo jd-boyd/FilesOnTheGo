@@ -202,16 +202,26 @@ podman run -d \
 echo "Waiting for FilesOnTheGo application to start..."
 sleep 10
 
-# Create admin account using PocketBase CLI (v0.33+ uses superuser upsert)
-echo "Attempting to create admin account..."
-podman run \
-       --pod $POD_NAME \
-       -v $APP_DATA:/app/data \
-       --entrypoint=/bin/sh \
-       filesonthego:test -c "\
-      /app/filesonthego superuser upsert ${ADMIN_EMAIL} ${ADMIN_PASSWORD} 2>&1 && \
-      echo 'Admin account created successfully' || \
-      echo 'Note: Admin account creation failed - may already exist'"
+# Create admin account by registering via the API (superuser CLI command starts a server)
+echo "Attempting to create admin account via API..."
+# First wait for the health endpoint to be ready
+max_wait=30
+for i in $(seq 1 $max_wait); do
+    if curl -s http://localhost:8090/api/health > /dev/null 2>&1; then
+        echo "Application is ready, creating admin account..."
+        break
+    fi
+    if [ $i -eq $max_wait ]; then
+        echo "Warning: Application did not become ready within ${max_wait} seconds"
+    fi
+    sleep 1
+done
+
+# Register admin user via API if public registration is enabled
+curl -s -X POST http://localhost:8090/api/collections/users/records \
+     -H "Content-Type: application/json" \
+     -d "{\"email\":\"${ADMIN_EMAIL}\",\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\",\"passwordConfirm\":\"${ADMIN_PASSWORD}\"}" \
+     > /dev/null 2>&1 && echo "Admin account created successfully" || echo "Note: Admin account may already exist"
 
 echo "Test environment is ready!"
 

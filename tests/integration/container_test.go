@@ -70,11 +70,11 @@ type ErrorResponse struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-// HealthResponse represents the health check response
+// HealthResponse represents the health check response from our custom /api/status endpoint
 type HealthResponse struct {
-	Status    string `json:"status"`
-	Timestamp string `json:"timestamp"`
-	Version   string `json:"version,omitempty"`
+	Status      string `json:"status"`
+	Environment string `json:"environment,omitempty"`
+	Version     string `json:"version,omitempty"`
 }
 
 // TestContainer_LoginFlow tests the basic login functionality
@@ -85,9 +85,9 @@ func TestContainer_LoginFlow(t *testing.T) {
 
 	config := SetupContainerTest(t)
 
-	// Test health endpoint first
+	// Test our custom status endpoint (PocketBase has its own /api/health)
 	t.Run("Health_Check", func(t *testing.T) {
-		resp, err := config.HTTPClient.Get(config.BaseURL + "/api/health")
+		resp, err := config.HTTPClient.Get(config.BaseURL + "/api/status")
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -98,7 +98,7 @@ func TestContainer_LoginFlow(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "ok", health.Status)
-		assert.NotEmpty(t, health.Timestamp)
+		assert.NotEmpty(t, health.Version)
 	})
 
 	// Test admin login
@@ -292,7 +292,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 	case "APP_URL":
 		return "http://localhost:8090"
 	case "ADMIN_EMAIL":
-		return "admin@filesonthego.local"
+		return "admin@filesonthego.test" // Must match run_tests.sh ADMIN_EMAIL
 	case "ADMIN_PASSWORD":
 		return "admin123"
 	default:

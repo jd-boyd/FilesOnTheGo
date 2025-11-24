@@ -1,0 +1,46 @@
+# FilesOnTheGo Configuration
+# Copy to config.yaml and edit for your environment.
+# Environment variables override these values (e.g., S3_ENDPOINT overrides s3_endpoint).
+
+# S3 Storage
+s3_endpoint: http://localhost:9000
+s3_region: us-east-1
+s3_bucket: filesonthego
+s3_access_key: minioadmin
+s3_secret_key: minioadmin
+s3_use_ssl: false
+
+# Application
+app_port: "8090"
+app_environment: development  # or "production"
+app_url: http://localhost:8090
+
+# Database
+db_path: ./pb_data
+
+# Uploads
+max_upload_size: 104857600  # 100MB in bytes
+
+# Security
+jwt_secret: change-me-in-production  # Required in production
+
+# Features
+public_registration: true
+email_verification: false
+require_email_auth: true
+
+# User Quotas
+default_user_quota: 10737418240  # 10GB in bytes, 0 = unlimited
+
+# TLS/HTTPS (optional)
+tls_enabled: false
+tls_port: "443"
+tls_cert_file: ""
+tls_key_file: ""
+tls_redirect: true
+
+# Let's Encrypt (optional, requires tls_enabled: true)
+letsencrypt_enabled: false
+letsencrypt_domain: ""
+letsencrypt_email: ""
+letsencrypt_cache: ./certs

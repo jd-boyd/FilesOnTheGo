@@ -139,7 +139,9 @@ podman run \
 
 echo ""
 echo "=== Development Environment Ready ==="
-echo "FilesOnTheGo Application: http://localhost:${APP_PORT}"
+echo ""
+echo "Open in your browser: http://localhost:${APP_PORT}"
+echo ""
 echo "MinIO Console: http://localhost:9001"
 echo "MinIO API: http://localhost:9000"
 echo ""
