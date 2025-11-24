@@ -13,7 +13,7 @@ func pointer(s string) *string {
 
 // InitialSchema creates all collections for FilesOnTheGo
 func init() {
-	core.SystemMigrations.Register(func(txApp core.App) error {
+	core.AppMigrations.Register(func(txApp core.App) error {
 		// 1. Extend users collection (superusers) with custom fields
 		usersCollection, err := txApp.FindCollectionByNameOrId(core.CollectionNameSuperusers)
 		if err != nil {

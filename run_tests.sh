@@ -202,14 +202,14 @@ podman run -d \
 echo "Waiting for FilesOnTheGo application to start..."
 sleep 10
 
-# Create admin account using PocketBase CLI if it exists
+# Create admin account using PocketBase CLI (v0.33+ uses superuser upsert)
 echo "Attempting to create admin account..."
 podman run \
        --pod $POD_NAME \
        -v $APP_DATA:/app/data \
        --entrypoint=/bin/sh \
        filesonthego:test -c "\
-      /app/filesonthego admin create ${ADMIN_EMAIL} ${ADMIN_PASSWORD} 2>/dev/null && \
+      /app/filesonthego superuser upsert ${ADMIN_EMAIL} ${ADMIN_PASSWORD} 2>&1 && \
       echo 'Admin account created successfully' || \
       echo 'Note: Admin account creation failed - may already exist'"
 

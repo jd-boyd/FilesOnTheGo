@@ -103,8 +103,8 @@ func main() {
 			return c.String(200, metricsService.GetMetrics())
 		})
 
-		// Health check endpoint
-		e.Router.GET("/api/health", func(c *core.RequestEvent) error {
+		// Custom health check endpoint with app info (PocketBase already has /api/health)
+		e.Router.GET("/api/status", func(c *core.RequestEvent) error {
 			return c.JSON(200, map[string]interface{}{
 				"status":      "ok",
 				"environment": cfg.AppEnvironment,
@@ -143,13 +143,19 @@ func main() {
 		})
 
 		logger.Info().Msg("Routes configured successfully")
-		return nil
+		return e.Next()
 	})
 
 	// Set up graceful shutdown
 	// Handle OS signals for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Bootstrap PocketBase (required before apis.Serve in v0.33+)
+	if err := app.Bootstrap(); err != nil {
+		logger.Fatal().Err(err).Msg("Failed to bootstrap PocketBase")
+	}
+	logger.Info().Msg("PocketBase bootstrapped successfully")
 
 	// Start PocketBase server in a goroutine
 	errChan := make(chan error, 1)

@@ -205,8 +205,7 @@ func TestTemplateRenderer_LoadAndRender(t *testing.T) {
 
 // TestTemplateRenderer_RenderNonExistent tests rendering a non-existent template
 func TestTemplateRenderer_NonExistentTemplate(t *testing.T) {
-	projectRoot := getProjectRoot(t)
-	renderer := NewTemplateRenderer(projectRoot)
+	renderer := getTemplateRendererFromAssets(t)
 	err := renderer.LoadTemplates()
 	require.NoError(t, err)
 
