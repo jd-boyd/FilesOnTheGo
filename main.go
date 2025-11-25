@@ -121,7 +121,13 @@ func main() {
 		})
 
 		// Initialize auth handler
-		authHandler := handlers.NewAuthHandler(app, templateRenderer, logger)
+		authHandler := handlers.NewAuthHandler(app, templateRenderer, logger, cfg)
+
+		// Initialize settings handler
+		settingsHandler := handlers.NewSettingsHandler(app, templateRenderer, logger, cfg)
+
+		// Initialize admin handler
+		adminHandler := handlers.NewAdminHandler(app, templateRenderer, logger, cfg)
 
 		// Authentication routes
 		e.Router.GET("/login", authHandler.ShowLoginPage)
@@ -133,12 +139,37 @@ func main() {
 		// Dashboard route (auth will be checked in handler)
 		e.Router.GET("/dashboard", authHandler.ShowDashboard)
 
+		// Settings routes (personal user settings) - require authentication
+		e.Router.GET("/settings", middleware.RequireAuth(app)(settingsHandler.ShowSettingsPage))
+
+		// Admin routes (user management & system settings) - require authentication
+		e.Router.GET("/admin", middleware.RequireAuth(app)(adminHandler.ShowAdminPage))
+		e.Router.POST("/api/admin/settings/update", middleware.RequireAuth(app)(adminHandler.HandleUpdateSystemSettings))
+		e.Router.POST("/api/admin/users/create", middleware.RequireAuth(app)(adminHandler.HandleCreateUser))
+		e.Router.DELETE("/api/admin/users/{id}", middleware.RequireAuth(app)(adminHandler.HandleDeleteUser))
+
 		// Root redirect to dashboard or login
 		e.Router.GET("/", func(c *core.RequestEvent) error {
-			// Check if user is authenticated
+			// Check if user is authenticated using the same logic as RequireAuth middleware
+
+			// First check if PocketBase has authenticated the user
+			if c.Auth != nil {
+				return c.Redirect(302, "/dashboard")
+			}
+
+			// Check our custom context
 			if c.Get("authRecord") != nil {
 				return c.Redirect(302, "/dashboard")
 			}
+
+			// Check for pb_auth cookie (our simplified validation)
+			cookie, err := c.Request.Cookie("pb_auth")
+			if err == nil && cookie.Value != "" {
+				// User has valid authentication cookie, redirect to dashboard
+				return c.Redirect(302, "/dashboard")
+			}
+
+			// Not authenticated, redirect to login
 			return c.Redirect(302, "/login")
 		})
 

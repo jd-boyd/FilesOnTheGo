@@ -4,7 +4,9 @@ package handlers
 
 import (
 	"net/http"
+	"os"
 
+	"github.com/jd-boyd/filesonthego/config"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
@@ -15,21 +17,24 @@ type AuthHandler struct {
 	app      *pocketbase.PocketBase
 	renderer *TemplateRenderer
 	logger   zerolog.Logger
+	config   *config.Config
 }
 
 // NewAuthHandler creates a new authentication handler
-func NewAuthHandler(app *pocketbase.PocketBase, renderer *TemplateRenderer, logger zerolog.Logger) *AuthHandler {
+func NewAuthHandler(app *pocketbase.PocketBase, renderer *TemplateRenderer, logger zerolog.Logger, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
 		app:      app,
 		renderer: renderer,
 		logger:   logger,
+		config:   cfg,
 	}
 }
 
 // ShowLoginPage renders the login page
 func (h *AuthHandler) ShowLoginPage(c *core.RequestEvent) error {
 	data := &TemplateData{
-		Title: "Login - FilesOnTheGo",
+		Title:              "Login - FilesOnTheGo",
+		PublicRegistration: h.config.PublicRegistration,
 	}
 
 	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -38,6 +43,12 @@ func (h *AuthHandler) ShowLoginPage(c *core.RequestEvent) error {
 
 // ShowRegisterPage renders the registration page
 func (h *AuthHandler) ShowRegisterPage(c *core.RequestEvent) error {
+	// Check if public registration is enabled
+	if !h.config.PublicRegistration {
+		h.logger.Warn().Msg("Registration page accessed when public registration is disabled")
+		return c.Redirect(http.StatusFound, "/login")
+	}
+
 	data := &TemplateData{
 		Title: "Register - FilesOnTheGo",
 	}
@@ -97,21 +108,23 @@ func (h *AuthHandler) HandleLogin(c *core.RequestEvent) error {
 		return h.handleLoginError(c, isHTMX, "Invalid email or password")
 	}
 
-	// Generate auth token (simplified - using record token directly)
-	token := record.TokenKey()
+	// Use PocketBase's built-in authentication by setting the auth record in the request context
+	// This will make PocketBase automatically handle the authentication session
+	c.Set("authRecord", record)
 
 	h.logger.Info().
 		Str("email", email).
 		Str("user_id", record.Id).
 		Msg("User logged in successfully")
 
-	// Set auth cookie
+	// Set PocketBase auth cookie using the proper method
+	// This ensures PocketBase recognizes the authentication
 	c.SetCookie(&http.Cookie{
 		Name:     "pb_auth",
-		Value:    token,
+		Value:    record.TokenKey(),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false, // Set to false for development with HTTP
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   60 * 60 * 24 * 7, // 7 days
 	})
@@ -128,6 +141,12 @@ func (h *AuthHandler) HandleLogin(c *core.RequestEvent) error {
 // HandleRegister processes registration requests
 func (h *AuthHandler) HandleRegister(c *core.RequestEvent) error {
 	isHTMX := IsHTMXRequest(c)
+
+	// Check if public registration is enabled
+	if !h.config.PublicRegistration {
+		h.logger.Warn().Msg("Registration attempt when public registration is disabled")
+		return h.handleRegisterError(c, isHTMX, "Public registration is currently disabled")
+	}
 
 	// Get form data
 	email := c.Request.FormValue("email")
@@ -237,8 +256,37 @@ func (h *AuthHandler) ShowDashboard(c *core.RequestEvent) error {
 	data.StoragePercent = 0
 	data.HasFiles = false
 
+	// Check if user is admin to show admin link in header
+	authRecord := c.Get("authRecord")
+	if authRecord != nil {
+		if record, ok := authRecord.(*core.Record); ok {
+			isAdmin := h.isAdmin(record)
+			data.Settings = map[string]interface{}{
+				"IsAdmin": isAdmin,
+			}
+		}
+	}
+
 	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	return h.renderer.Render(c.Response, "dashboard", data)
+}
+
+// isAdmin checks if a user is an admin (duplicated from settings_handler for now)
+func (h *AuthHandler) isAdmin(record *core.Record) bool {
+	email := record.GetString("email")
+
+	// Check if email matches admin email from environment
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	if adminEmail != "" && email == adminEmail {
+		return true
+	}
+
+	// Check if there's an admin field on the user record
+	if record.GetBool("is_admin") {
+		return true
+	}
+
+	return false
 }
 
 // Helper methods for error handling

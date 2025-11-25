@@ -16,16 +16,18 @@ import (
 
 // TemplateData holds common data passed to templates
 type TemplateData struct {
-	Title          string
-	User           interface{}
-	FlashMessage   string
-	FlashType      string
-	Breadcrumb     []BreadcrumbItem
-	StorageUsed    string
-	StorageQuota   string
-	StoragePercent int
-	HasFiles       bool
-	RecentActivity []ActivityItem
+	Title              string
+	User               interface{}
+	FlashMessage       string
+	FlashType          string
+	Breadcrumb         []BreadcrumbItem
+	StorageUsed        string
+	StorageQuota       string
+	StoragePercent     int
+	HasFiles           bool
+	RecentActivity     []ActivityItem
+	PublicRegistration bool
+	Settings           map[string]interface{}
 }
 
 // BreadcrumbItem represents a breadcrumb navigation item
@@ -99,6 +101,22 @@ func (r *TemplateRenderer) LoadTemplates() error {
 			"components/breadcrumb.html",
 			"components/loading.html",
 			"pages/dashboard.html",
+		},
+		"settings": {
+			"layouts/base.html",
+			"layouts/app.html",
+			"components/header.html",
+			"components/breadcrumb.html",
+			"components/loading.html",
+			"pages/settings.html",
+		},
+		"admin": {
+			"layouts/base.html",
+			"layouts/app.html",
+			"components/header.html",
+			"components/breadcrumb.html",
+			"components/loading.html",
+			"pages/admin.html",
 		},
 	}
 

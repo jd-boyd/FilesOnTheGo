@@ -48,9 +48,11 @@ export PUBLIC_REGISTRATION=true
 export EMAIL_VERIFICATION=false
 export REQUIRE_EMAIL_AUTH=false
 
-# Admin Account for Testing
+# Test Accounts
 export ADMIN_EMAIL=admin@filesonthego.local
 export ADMIN_PASSWORD=admin123
+export USER_EMAIL=user@filesonthego.local
+export USER_PASSWORD=user123
 
 echo "=== FilesOnTheGo Development Environment ==="
 echo "Using DATA_DIR: ${DATA_DIR}"
@@ -59,10 +61,19 @@ echo "Using APP_DATA: ${APP_DATA}"
 echo "Host IP: ${HOST_IP}"
 echo "S3 Endpoint: ${S3_ENDPOINT}"
 echo "App URL: ${APP_URL}"
-echo "Admin Account: ${ADMIN_EMAIL}"
 echo ""
 echo "Note: Service will be accessible from other machines on the network"
 echo "To use localhost only, set HOST_IP=localhost before running this script"
+echo ""
+
+# Check for and stop any existing pod
+echo "Checking for existing pod..."
+if podman pod exists $POD_NAME 2>/dev/null; then
+    echo "Found existing pod '$POD_NAME', stopping and removing..."
+    podman pod stop $POD_NAME 2>/dev/null
+    podman pod rm -f $POD_NAME 2>/dev/null
+    echo "✅ Cleaned up existing pod"
+fi
 
 # Create data directories
 mkdir -p $MINIO_DATA
@@ -73,10 +84,8 @@ mkdir -p $APP_DATA
 podman unshare chown -R 1001:1001 $APP_DATA 2>/dev/null || \
     chmod -R 777 $APP_DATA
 
-# Clean up existing pod and create new one
+# Create new pod
 echo "Setting up Podman pod..."
-podman pod rm -f $POD_NAME && /bin/true
-
 podman pod create -p ${APP_PORT}:8090 -p 9000:9000 -p 9001:9001 -n $POD_NAME
 
 # Start MinIO service
@@ -135,9 +144,46 @@ else
     exit 1
 fi
 
-# Build FilesOnTheGo application container
+# Build FilesOnTheGo application container (before starting the app)
 echo "Building FilesOnTheGo container image..."
-podman build -t filesonthego:latest .
+# Use --no-cache if NOCACHE environment variable is set
+if [ "$NOCACHE" = "true" ]; then
+    podman build --no-cache -t filesonthego:latest .
+else
+    podman build -t filesonthego:latest .
+fi
+
+# Build the binary locally since we mount the source directory into the container
+echo "Building binary locally for development mode..."
+CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o filesonthego main.go
+
+# Ensure MinIO is fully ready before starting FilesOnTheGo
+echo "Verifying MinIO is ready before starting application..."
+max_check_attempts=10
+check_attempt=1
+while [ $check_attempt -le $max_check_attempts ]; do
+    echo "Checking MinIO bucket readiness (attempt $check_attempt/$max_check_attempts)..."
+
+    if podman run \
+           --pod $POD_NAME \
+           --entrypoint=/bin/sh \
+           quay.io/minio/mc -c "\
+           /usr/bin/mc alias set myminio http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && \
+           /usr/bin/mc ls myminio/${MINIO_BUCKET}" >/dev/null 2>&1; then
+        echo "✅ MinIO and bucket are ready!"
+        break
+    fi
+
+    if [ $check_attempt -eq $max_check_attempts ]; then
+        echo "❌ MinIO bucket not ready after $max_check_attempts attempts"
+        echo "Cleaning up..."
+        podman pod rm -f $POD_NAME
+        exit 1
+    fi
+
+    sleep 2
+    check_attempt=$((check_attempt + 1))
+done
 
 # Start FilesOnTheGo application
 echo "Starting FilesOnTheGo application..."
@@ -177,36 +223,70 @@ for i in $(seq 1 $max_wait); do
     sleep 1
 done
 
-# Create admin account via API
-echo "Attempting to create admin account..."
+# Create test accounts via API
+echo "Creating test accounts..."
+
+# Create admin account
+echo "  Creating admin account..."
 curl -s -X POST http://${HOST_IP}:8090/api/collections/users/records \
      -H "Content-Type: application/json" \
      -d "{\"email\":\"${ADMIN_EMAIL}\",\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\",\"passwordConfirm\":\"${ADMIN_PASSWORD}\"}" \
-     > /dev/null 2>&1 && echo "Admin account created successfully" || echo "Note: Admin account may already exist"
+     > /dev/null 2>&1 && echo "  ✅ Admin account created" || echo "  ℹ️  Admin account may already exist"
+
+# Create regular user account
+echo "  Creating regular user account..."
+curl -s -X POST http://${HOST_IP}:8090/api/collections/users/records \
+     -H "Content-Type: application/json" \
+     -d "{\"email\":\"${USER_EMAIL}\",\"username\":\"user\",\"password\":\"${USER_PASSWORD}\",\"passwordConfirm\":\"${USER_PASSWORD}\"}" \
+     > /dev/null 2>&1 && echo "  ✅ Regular user account created" || echo "  ℹ️  Regular user account may already exist"
 
 echo ""
+echo "=========================================="
 echo "=== Development Environment Ready ==="
+echo "=========================================="
 echo ""
-echo "Access from any machine on the network:"
-echo "  Application: http://${HOST_IP}:${APP_PORT}"
-echo "  MinIO Console: http://${HOST_IP}:9001"
-echo "  MinIO API: http://${HOST_IP}:9000"
+echo "📍 Access URLs:"
+echo "  Application (network): http://${HOST_IP}:${APP_PORT}"
+echo "  Application (local):   http://localhost:${APP_PORT}"
+echo "  MinIO Console:         http://localhost:9001"
 echo ""
-echo "Access from this machine (localhost):"
-echo "  Application: http://localhost:${APP_PORT}"
-echo "  MinIO Console: http://localhost:9001"
+echo "👤 Test User Accounts:"
 echo ""
-echo "Admin Login Details:"
-echo "  Email: ${ADMIN_EMAIL}"
-echo "  Password: ${ADMIN_PASSWORD}"
+echo "  Admin User:"
+echo "    Email:    ${ADMIN_EMAIL}"
+echo "    Password: ${ADMIN_PASSWORD}"
+echo "    Access:   Full admin privileges, can manage users & settings"
 echo ""
-echo "MinIO Console Details:"
-echo "  Username: ${MINIO_ROOT_USER}"
-echo "  Password: ${MINIO_ROOT_PASSWORD}"
+echo "  Regular User:"
+echo "    Email:    ${USER_EMAIL}"
+echo "    Password: ${USER_PASSWORD}"
+echo "    Access:   Standard user, can upload/download files"
 echo ""
-echo "To view logs:"
-echo "  podman logs -f filesonthego-app-dev"
-echo "  podman logs -f filesonthego-minio-dev"
+echo "🗄️  MinIO Console:"
+echo "    Username: ${MINIO_ROOT_USER}"
+echo "    Password: ${MINIO_ROOT_PASSWORD}"
 echo ""
-echo "To stop the environment:"
-echo "  podman pod stop ${POD_NAME}"
+echo "============================================"
+echo ""
+echo "📋 Tailing application logs..."
+echo "   Press Ctrl-C to stop and cleanup the environment"
+echo ""
+
+# Cleanup function
+cleanup() {
+    echo ""
+    echo ""
+    echo "🛑 Shutting down development environment..."
+    echo "   Stopping pod..."
+    podman pod stop ${POD_NAME} 2>/dev/null
+    echo "   Removing pod..."
+    podman pod rm -f ${POD_NAME} 2>/dev/null
+    echo "✅ Development environment cleaned up"
+    exit 0
+}
+
+# Trap Ctrl-C and call cleanup
+trap cleanup SIGINT SIGTERM
+
+# Tail the application logs (this will block until Ctrl-C)
+podman logs -f filesonthego-app-dev

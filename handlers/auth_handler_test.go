@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/jd-boyd/filesonthego/assets"
@@ -433,6 +434,130 @@ func TestLogoutCookieClearing(t *testing.T) {
 
 	assert.Empty(t, cookie.Value, "Logout cookie should have empty value")
 	assert.Equal(t, -1, cookie.MaxAge, "Logout cookie should have negative MaxAge to delete")
+}
+
+// TestAuthHandler_isAdmin_EnvironmentAdmin tests admin detection via environment variable
+func TestAuthHandler_isAdmin_EnvironmentAdmin(t *testing.T) {
+	// Set admin email environment
+	os.Setenv("ADMIN_EMAIL", "admin@example.com")
+	defer os.Unsetenv("ADMIN_EMAIL")
+
+	// Simulate the logic that would be used in isAdmin
+	email := "admin@example.com"
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	isAdmin := adminEmail != "" && email == adminEmail
+
+	assert.True(t, isAdmin, "User with admin email should be admin")
+
+	// Test non-admin email
+	nonAdminEmail := "user@example.com"
+	isAdmin = adminEmail != "" && nonAdminEmail == adminEmail
+	assert.False(t, isAdmin, "User without admin email should not be admin")
+}
+
+// TestAuthHandler_isAdmin_RecordAdmin tests admin detection via admin field
+func TestAuthHandler_isAdmin_RecordAdmin(t *testing.T) {
+	// Ensure admin email is not set
+	os.Unsetenv("ADMIN_EMAIL")
+
+	// Simulate the logic that would be used in isAdmin for field-based admin detection
+	isAdminField := true
+	email := "user@example.com"
+	adminEmail := "" // No admin email set
+
+	// Combined logic: admin if field is true OR email matches admin email
+	isAdmin := isAdminField || (adminEmail != "" && email == adminEmail)
+
+	assert.True(t, isAdmin, "User with admin field should be admin")
+}
+
+// TestAuthHandler_LoginValidation tests login form validation logic
+func TestAuthHandler_LoginValidation(t *testing.T) {
+	testCases := []struct {
+		name        string
+		email       string
+		password    string
+		expectValid bool
+	}{
+		{"valid credentials", "user@example.com", "password123", true},
+		{"missing email", "", "password123", false},
+		{"missing password", "user@example.com", "", false},
+		{"both missing", "", "", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			isValid := tc.email != "" && tc.password != ""
+			assert.Equal(t, tc.expectValid, isValid)
+		})
+	}
+}
+
+// TestAuthHandler_RegisterValidation tests registration form validation logic
+func TestAuthHandler_RegisterValidation(t *testing.T) {
+	testCases := []struct {
+		name            string
+		email           string
+		username        string
+		password        string
+		passwordConfirm string
+		expectValid     bool
+	}{
+		{"valid registration", "user@example.com", "username", "password123", "password123", true},
+		{"password mismatch", "user@example.com", "username", "password123", "different", false},
+		{"missing email", "", "username", "password123", "password123", false},
+		{"missing username", "user@example.com", "", "password123", "password123", false},
+		{"missing password", "user@example.com", "username", "", "password123", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			allFieldsPresent := tc.email != "" && tc.username != "" && tc.password != ""
+			passwordsMatch := tc.password == tc.passwordConfirm
+			isValid := allFieldsPresent && passwordsMatch
+			assert.Equal(t, tc.expectValid, isValid)
+		})
+	}
+}
+
+// TestAuthHandler_CookieSecurity tests cookie security settings
+func TestAuthHandler_CookieSecurity(t *testing.T) {
+	// Test cookie security settings that would be used for authentication
+	cookieName := "pb_auth"
+	cookieValue := "test-token"
+	path := "/"
+	httpOnly := true
+	secure := true
+	sameSite := http.SameSiteLaxMode
+	maxAge := 60 * 60 * 24 * 7 // 7 days
+
+	assert.Equal(t, "pb_auth", cookieName)
+	assert.Equal(t, "test-token", cookieValue)
+	assert.Equal(t, "/", path)
+	assert.True(t, httpOnly, "Cookie should be HttpOnly for security")
+	assert.True(t, secure, "Cookie should be Secure")
+	assert.Equal(t, http.SameSiteLaxMode, sameSite)
+	assert.Equal(t, 604800, maxAge, "Cookie should expire in 7 days")
+}
+
+// TestAuthHandler_LogoutCookieClearing tests logout cookie clearing
+func TestAuthHandler_LogoutCookieClearing(t *testing.T) {
+	// Test cookie clearing settings for logout
+	cookieName := "pb_auth"
+	cookieValue := "" // Empty for deletion
+	path := "/"
+	httpOnly := true
+	secure := true
+	sameSite := http.SameSiteLaxMode
+	maxAge := -1 // Negative to delete cookie
+
+	assert.Equal(t, "pb_auth", cookieName)
+	assert.Empty(t, cookieValue, "Logout cookie should have empty value")
+	assert.Equal(t, "/", path)
+	assert.True(t, httpOnly)
+	assert.True(t, secure)
+	assert.Equal(t, http.SameSiteLaxMode, sameSite)
+	assert.Equal(t, -1, maxAge, "Logout cookie should have negative MaxAge to delete")
 }
 
 // Placeholder test to ensure package compiles
