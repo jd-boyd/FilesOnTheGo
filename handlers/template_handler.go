@@ -20,6 +20,8 @@ type TemplateData struct {
 	User               interface{}
 	FlashMessage       string
 	FlashType          string
+	Success            string
+	Error              string
 	Breadcrumb         []BreadcrumbItem
 	StorageUsed        string
 	StorageQuota       string
@@ -117,6 +119,14 @@ func (r *TemplateRenderer) LoadTemplates() error {
 			"components/breadcrumb.html",
 			"components/loading.html",
 			"pages/admin.html",
+		},
+		"profile": {
+			"layouts/base.html",
+			"layouts/app.html",
+			"components/header.html",
+			"components/breadcrumb.html",
+			"components/loading.html",
+			"pages/profile.html",
 		},
 	}
 

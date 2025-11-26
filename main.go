@@ -136,11 +136,15 @@ func main() {
 		e.Router.POST("/api/auth/register", authHandler.HandleRegister)
 		e.Router.POST("/logout", authHandler.HandleLogout)
 
-		// Dashboard route (auth will be checked in handler)
-		e.Router.GET("/dashboard", authHandler.ShowDashboard)
+		// Dashboard route - require authentication
+		e.Router.GET("/dashboard", middleware.RequireAuth(app)(authHandler.ShowDashboard))
 
 		// Settings routes (personal user settings) - require authentication
 		e.Router.GET("/settings", middleware.RequireAuth(app)(settingsHandler.ShowSettingsPage))
+
+		// Profile routes (user profile management) - require authentication
+		e.Router.GET("/profile", middleware.RequireAuth(app)(settingsHandler.ShowProfilePage))
+		e.Router.POST("/profile", middleware.RequireAuth(app)(settingsHandler.HandleUpdateProfile))
 
 		// Admin routes (user management & system settings) - require authentication
 		e.Router.GET("/admin", middleware.RequireAuth(app)(adminHandler.ShowAdminPage))
@@ -187,6 +191,9 @@ func main() {
 		logger.Fatal().Err(err).Msg("Failed to bootstrap PocketBase")
 	}
 	logger.Info().Msg("PocketBase bootstrapped successfully")
+
+	// Ensure admin user has proper permissions
+	ensureAdminUser(app, logger)
 
 	// Start PocketBase server in a goroutine
 	errChan := make(chan error, 1)
@@ -278,4 +285,49 @@ func initLogger(cfg *config.Config) zerolog.Logger {
 		Logger()
 
 	return logger
+}
+
+// ensureAdminUser ensures the admin user exists with proper is_admin flag
+func ensureAdminUser(app *pocketbase.PocketBase, logger zerolog.Logger) {
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	if adminEmail == "" {
+		logger.Debug().Msg("No ADMIN_EMAIL environment variable set, skipping admin user setup")
+		return
+	}
+
+	logger.Info().
+		Str("admin_email", adminEmail).
+		Msg("Ensuring admin user exists with proper permissions")
+
+	// Try to find user by email in superusers collection (PocketBase auth users)
+	record, err := app.FindFirstRecordByData("superusers", "email", adminEmail)
+	if err != nil {
+		logger.Warn().
+			Str("admin_email", adminEmail).
+			Err(err).
+			Msg("Admin user not found, will be created when API is called")
+		return
+	}
+
+	// Check if user already has admin flag
+	if record.GetBool("is_admin") {
+		logger.Info().
+			Str("admin_email", adminEmail).
+			Msg("Admin user already has is_admin flag set")
+		return
+	}
+
+	// Set the admin flag
+	record.Set("is_admin", true)
+	if err := app.Save(record); err != nil {
+		logger.Error().
+			Str("admin_email", adminEmail).
+			Err(err).
+			Msg("Failed to set is_admin flag on existing admin user")
+		return
+	}
+
+	logger.Info().
+		Str("admin_email", adminEmail).
+		Msg("Successfully set is_admin flag on existing admin user")
 }

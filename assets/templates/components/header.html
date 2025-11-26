@@ -29,7 +29,7 @@
                             @click="open = !open"
                             class="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded-full">
                         <div class="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-semibold text-sm">
-                            {{if .User}}{{index .User.Email 0 | printf "%c" | upper}}{{else}}U{{end}}
+                            {{if .User}}{{index .User "email" | printf "%.1s" | upper}}{{else}}U{{end}}
                         </div>
                         <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -57,10 +57,7 @@
                             <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                 Settings
                             </a>
-                            <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
-                                Profile
-                            </a>
-                            <hr class="my-1">
+                              <hr class="my-1">
                             <form hx-post="/logout" hx-swap="none">
                                 <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                     Sign out

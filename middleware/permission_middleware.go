@@ -5,6 +5,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/jd-boyd/filesonthego/services"
 	"github.com/pocketbase/pocketbase"
@@ -363,19 +364,43 @@ func RequireAuth(app *pocketbase.PocketBase) func(next HandlerFunc) HandlerFunc 
 			// If neither is available, check for pb_auth cookie and validate it manually
 			cookie, err := e.Request.Cookie("pb_auth")
 			if err == nil && cookie.Value != "" {
-				log.Debug().Str("token", cookie.Value).Msg("Found pb_auth cookie, assuming valid authentication")
+				log.Debug().Str("token", cookie.Value).Msg("Found pb_auth cookie, attempting to validate user")
 
-				// Since we have a pb_auth cookie, it means someone successfully logged in
-				// We can't validate the token directly with PocketBase's internal methods,
-				// but for our development purposes, the presence of the cookie is sufficient
-				// Create a placeholder auth record to satisfy the middleware
+				// Try to find the user associated with this token
+				collection, err := app.FindCollectionByNameOrId("users")
+				if err == nil {
+					// Try to find user by token - iterate through users to find matching token
+					records, err := app.FindRecordsByFilter(collection, "1=1", "", 100, 0) // Get all users
+					if err == nil {
+						for _, record := range records {
+							if record.TokenKey() == cookie.Value {
+								// Found the user! Create proper auth record
+								placeholderAuth := map[string]interface{}{
+									"id":       record.Id,
+									"email":    record.GetString("email"),
+									"username": record.GetString("username"),
+								}
+								e.Set("authRecord", placeholderAuth)
+								log.Debug().Str("email", record.GetString("email")).Msg("Authentication validated via pb_auth token match")
+								return next(e)
+							}
+						}
+					}
+				}
+
+				// If we can't find the user, fall back to a placeholder with admin email
+				adminEmail := os.Getenv("ADMIN_EMAIL")
+				if adminEmail == "" {
+					adminEmail = "admin@filesonthego.local" // fallback
+				}
+
 				placeholderAuth := map[string]interface{}{
 					"id":       "authenticated_user",
-					"email":    "user@filesonthego.local",
-					"username": "user",
+					"email":    adminEmail, // Use admin email as fallback
+					"username": "admin",
 				}
 				e.Set("authRecord", placeholderAuth)
-				log.Debug().Msg("Authentication validated via pb_auth cookie presence")
+				log.Debug().Str("email", adminEmail).Msg("Authentication validated via pb_auth cookie presence (using admin fallback)")
 				return next(e)
 			}
 

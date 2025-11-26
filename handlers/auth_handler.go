@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -256,16 +257,68 @@ func (h *AuthHandler) ShowDashboard(c *core.RequestEvent) error {
 	data.StoragePercent = 0
 	data.HasFiles = false
 
+	// Always log when ShowDashboard is called
+	h.logger.Info().Msg("=== ShowDashboard called ===")
+
 	// Check if user is admin to show admin link in header
 	authRecord := c.Get("authRecord")
 	if authRecord != nil {
+		h.logger.Info().Msg("AuthRecord found, checking admin status")
+
+		// Try to get user info from the auth record
+		var userEmail string
+		var isAdminField bool
+
+		// Check if it's a PocketBase core.Record
 		if record, ok := authRecord.(*core.Record); ok {
-			isAdmin := h.isAdmin(record)
-			data.Settings = map[string]interface{}{
-				"IsAdmin": isAdmin,
+			userEmail = record.GetString("email")
+			isAdminField = record.GetBool("is_admin")
+		} else if recordMap, ok := authRecord.(map[string]interface{}); ok {
+			// Handle map[string]interface{} from custom middleware
+			if email, exists := recordMap["email"].(string); exists {
+				userEmail = email
 			}
+			// isAdmin field doesn't exist in this placeholder
+			isAdminField = false
+			} else {
+			// Unknown type, log error and continue
+			h.logger.Error().Interface("authRecord_type", fmt.Sprintf("%T", authRecord)).Msg("Unknown authRecord type")
+			// Continue with default (non-admin) values
 		}
+
+		// Get ADMIN_EMAIL from environment for debugging
+		adminEmail := os.Getenv("ADMIN_EMAIL")
+
+		h.logger.Info().
+			Str("user_email", userEmail).
+			Str("admin_email_env", adminEmail).
+			Bool("is_admin_field", isAdminField).
+			Msg("Checking admin status for user")
+
+		// For now, use email comparison since the placeholder doesn't have is_admin field
+		isAdmin := adminEmail != "" && userEmail == adminEmail
+		h.logger.Info().
+			Str("user_email", userEmail).
+			Bool("is_admin_result", isAdmin).
+			Msg("Admin status determined for user - setting in template data")
+
+		data.Settings = map[string]interface{}{
+			"IsAdmin": isAdmin,
+		}
+
+		// Log the final template data
+		h.logger.Info().
+			Interface("template_settings", data.Settings).
+			Interface("template_user", data.User).
+			Msg("Template data Settings and User set")
+	} else {
+		h.logger.Warn().Msg("No AuthRecord found in request context")
 	}
+
+	// Debug log the complete template data structure
+	h.logger.Info().
+		Interface("complete_template_data", data).
+		Msg("Complete template data being sent to template")
 
 	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	return h.renderer.Render(c.Response, "dashboard", data)
@@ -274,18 +327,37 @@ func (h *AuthHandler) ShowDashboard(c *core.RequestEvent) error {
 // isAdmin checks if a user is an admin (duplicated from settings_handler for now)
 func (h *AuthHandler) isAdmin(record *core.Record) bool {
 	email := record.GetString("email")
+	isAdminField := record.GetBool("is_admin")
 
 	// Check if email matches admin email from environment
 	adminEmail := os.Getenv("ADMIN_EMAIL")
-	if adminEmail != "" && email == adminEmail {
+	emailMatch := adminEmail != "" && email == adminEmail
+
+	h.logger.Debug().
+		Str("user_email", email).
+		Str("admin_email_env", adminEmail).
+		Bool("email_match", emailMatch).
+		Bool("is_admin_field", isAdminField).
+		Msg("Admin check details")
+
+	if emailMatch {
+		h.logger.Info().
+			Str("user_email", email).
+			Msg("User is admin by email match")
 		return true
 	}
 
 	// Check if there's an admin field on the user record
-	if record.GetBool("is_admin") {
+	if isAdminField {
+		h.logger.Info().
+			Str("user_email", email).
+			Msg("User is admin by field flag")
 		return true
 	}
 
+	h.logger.Info().
+		Str("user_email", email).
+		Msg("User is not admin")
 	return false
 }
 

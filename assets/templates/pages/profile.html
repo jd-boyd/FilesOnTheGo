@@ -1,0 +1,137 @@
+{{template "app.html" .}}
+
+{{define "title"}}Edit Profile - FilesOnTheGo{{end}}
+
+{{define "content"}}
+<div class="max-w-4xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Edit Profile</h1>
+        <p class="mt-2 text-sm text-gray-600">
+            Update your personal information and display name
+        </p>
+    </div>
+
+    <!-- Success/Error Messages -->
+    {{if .Success}}
+    <div class="mb-6 bg-green-50 border border-green-200 text-green-800 rounded-md p-4">
+        <p class="text-sm">{{.Success}}</p>
+    </div>
+    {{end}}
+
+    {{if .Error}}
+    <div class="mb-6 bg-red-50 border border-red-200 text-red-800 rounded-md p-4">
+        <p class="text-sm">{{.Error}}</p>
+    </div>
+    {{end}}
+
+    <!-- Profile Form -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Personal Information</h2>
+        </div>
+
+        <form hx-post="/profile" hx-target="#profile-form" hx-swap="innerHTML" class="px-6 py-4 space-y-6" id="profile-form">
+            <!-- Display Name -->
+            <div>
+                <label for="displayName" class="block text-sm font-medium text-gray-700 mb-2">
+                    Display Name
+                </label>
+                <input
+                    type="text"
+                    id="displayName"
+                    name="displayName"
+                    value="{{if .User}}{{.User.Name}}{{else}}User{{end}}"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
+                    placeholder="Enter your display name"
+                    required
+                />
+                <p class="mt-1 text-sm text-gray-500">
+                    This is how your name will appear throughout the application
+                </p>
+            </div>
+
+            <!-- Email (Readonly) -->
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                </label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{if .User}}{{.User.Email}}{{end}}"
+                    class="block w-full rounded-md border-gray-300 bg-gray-50 sm:text-sm px-3 py-2"
+                    readonly
+                    disabled
+                />
+                <p class="mt-1 text-sm text-gray-500">
+                    Email address is used for login and cannot be changed
+                </p>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end space-x-3">
+                <a href="/settings" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    Cancel
+                </a>
+                <button
+                    type="submit"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    hx-indicator="#loading-spinner"
+                >
+                    <span id="loading-spinner" class="hidden">
+                        <svg class="animate-spin h-4 w-4 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                    </span>
+                    <span id="button-text">Save Changes</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Account Information -->
+    <div class="bg-white shadow rounded-lg overflow-hidden mt-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Account Information</h2>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+            <!-- Account Created -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Account Created</label>
+                <p class="mt-1 text-sm text-gray-900">{{if .User}}{{.User.Created}}{{else}}Unknown{{end}}</p>
+            </div>
+
+            <!-- Account ID -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Account ID</label>
+                <p class="mt-1 text-sm font-mono text-gray-600">{{if .User}}{{.User.ID}}{{else}}Unknown{{end}}</p>
+            </div>
+
+            <!-- Admin Status -->
+            {{if .Settings}}
+            {{if .Settings.IsAdmin}}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-blue-800">Administrator Account</h3>
+                        <div class="mt-2 text-sm text-blue-700">
+                            <p>You have administrator privileges and can access system management features.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}

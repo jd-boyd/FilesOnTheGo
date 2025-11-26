@@ -24,12 +24,19 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email Address</label>
                     <p class="mt-1 text-sm text-gray-900">{{if .User}}{{.User.Email}}{{else}}Not logged in{{end}}</p>
+                    <p class="mt-1 text-xs text-gray-500">Used for logging into your account</p>
                 </div>
 
-                <!-- Username -->
+                <!-- Display Name -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Username</label>
-                    <p class="mt-1 text-sm text-gray-900">{{if .User}}{{.User.Username}}{{else}}-{{end}}</p>
+                    <label class="block text-sm font-medium text-gray-700">Display Name</label>
+                    <div class="mt-1 flex items-center justify-between">
+                        <p class="text-sm text-gray-900">{{if .User}}{{if .User.Name}}{{.User.Name}}{{else}}User{{end}}{{else}}-{{end}}</p>
+                        <a href="/profile" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            Edit
+                        </a>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">How your name appears throughout the application</p>
                 </div>
             </div>
         </div>
