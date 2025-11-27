@@ -19,6 +19,20 @@ export APP_DATA=${DATA_DIR}/app_data
 export APP_PORT=8090
 export APP_ENVIRONMENT=development
 
+# Add --skip-build flag support
+SKIP_BUILD=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --skip-build)
+            SKIP_BUILD=true
+            shift
+            ;;
+        *)
+            ;;
+    esac
+done
+
+
 # Detect hostname for external access (can be overridden with HOST_IP environment variable)
 if [ -z "$HOST_IP" ]; then
     # Try to get the primary IP address
@@ -66,6 +80,24 @@ echo "Note: Service will be accessible from other machines on the network"
 echo "To use localhost only, set HOST_IP=localhost before running this script"
 echo ""
 
+if [ "$SKIP_BUILD" = "true" ]; then
+    echo "Skiping container build."
+else
+    # Build FilesOnTheGo application container (before starting the app)
+    echo "Building FilesOnTheGo container image..."
+    # Use --no-cache if NOCACHE environment variable is set
+    if [ "$NOCACHE" = "true" ]; then
+        podman build --no-cache -t filesonthego:latest .
+    else
+        podman build -t filesonthego:latest .
+    fi
+fi
+
+# Build the binary locally since we mount the source directory into the container
+echo "Building binary locally for development mode..."
+CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o filesonthego main.go
+
+
 # Check for and stop any existing pod
 echo "Checking for existing pod..."
 if podman pod exists $POD_NAME 2>/dev/null; then
@@ -74,6 +106,7 @@ if podman pod exists $POD_NAME 2>/dev/null; then
     podman pod rm -f $POD_NAME 2>/dev/null
     echo "✅ Cleaned up existing pod"
 fi
+
 
 # Create data directories
 mkdir -p $MINIO_DATA
@@ -143,19 +176,6 @@ else
     podman pod rm -f $POD_NAME
     exit 1
 fi
-
-# Build FilesOnTheGo application container (before starting the app)
-echo "Building FilesOnTheGo container image..."
-# Use --no-cache if NOCACHE environment variable is set
-if [ "$NOCACHE" = "true" ]; then
-    podman build --no-cache -t filesonthego:latest .
-else
-    podman build -t filesonthego:latest .
-fi
-
-# Build the binary locally since we mount the source directory into the container
-echo "Building binary locally for development mode..."
-CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o filesonthego main.go
 
 # Ensure MinIO is fully ready before starting FilesOnTheGo
 echo "Verifying MinIO is ready before starting application..."
