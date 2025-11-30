@@ -128,11 +128,21 @@ func main() {
 	db := database.GetDB()
 	metricsService := services.NewMetricsService()
 	userService := services.NewUserService(db, logger)
+	s3Service, err := services.NewS3Service(cfg)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize S3 service")
+	}
+	permissionService := services.NewPermissionService(db, logger)
+	shareService := services.NewShareService(db, logger)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, templateRenderer, logger, cfg, jwtManager, sessionManager)
 	settingsHandler := handlers.NewSettingsHandler(userService, templateRenderer, logger)
 	adminHandler := handlers.NewAdminHandler(userService, templateRenderer, logger)
+	fileUploadHandler := handlers.NewFileUploadHandler(db, s3Service, permissionService, userService, logger, cfg)
+	fileDownloadHandler := handlers.NewFileDownloadHandler(db, s3Service, permissionService, logger)
+	directoryHandler := handlers.NewDirectoryHandler(db, permissionService, logger, templateRenderer)
+	shareHandler := handlers.NewShareHandler(db, shareService, permissionService, logger, templateRenderer)
 
 	// Ensure admin user exists with proper permissions
 	ensureAdminUser(userService, logger)
@@ -193,7 +203,27 @@ func main() {
 		protected.GET("/api/profile/stats", settingsHandler.GetProfileStats)
 		protected.POST("/api/profile/update", settingsHandler.UpdateProfile)
 		protected.POST("/api/profile/password", settingsHandler.UpdatePassword)
+
+		// File routes
+		protected.POST("/api/files/upload", fileUploadHandler.HandleUpload)
+		protected.GET("/api/files/:id/download", fileDownloadHandler.HandleDownload)
+		protected.DELETE("/api/files/:id", fileDownloadHandler.HandleDelete)
+
+		// Directory routes
+		protected.GET("/api/directories", directoryHandler.ListDirectory)
+		protected.POST("/api/directories", directoryHandler.CreateDirectory)
+		protected.DELETE("/api/directories/:id", directoryHandler.DeleteDirectory)
+
+		// Share routes
+		protected.POST("/api/shares", shareHandler.CreateShare)
+		protected.GET("/api/shares", shareHandler.ListShares)
+		protected.GET("/api/shares/:id", shareHandler.GetShare)
+		protected.DELETE("/api/shares/:id", shareHandler.RevokeShare)
 	}
+
+	// Public share access (no auth required)
+	router.GET("/share", shareHandler.AccessShare)
+	router.POST("/share", shareHandler.AccessShare)
 
 	// Admin routes (require admin privileges)
 	admin := router.Group("/admin")
