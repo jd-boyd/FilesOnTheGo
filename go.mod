@@ -5,13 +5,17 @@ go 1.24.0
 toolchain go1.24.7
 
 require (
+	github.com/gin-contrib/sessions v1.0.1
+	github.com/gin-gonic/gin v1.10.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
-	github.com/pocketbase/pocketbase v0.33.0
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.44.0
 	golang.org/x/text v0.31.0
+	gorm.io/driver/sqlite v1.5.7
+	gorm.io/gorm v1.25.12
 )
 
 require (

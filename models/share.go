@@ -3,9 +3,8 @@ package models
 import (
 	"time"
 
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/core"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // PermissionType defines the type of permission for a share
@@ -27,16 +26,19 @@ const (
 
 // Share represents a share link record in the database
 type Share struct {
-	core.BaseModel
-	User           string         `db:"user" json:"user"` // Relation ID
-	ResourceType   ResourceType   `db:"resource_type" json:"resource_type"`
-	File           string         `db:"file" json:"file"`               // Relation ID (optional)
-	Directory      string         `db:"directory" json:"directory"`     // Relation ID (optional)
-	ShareToken     string         `db:"share_token" json:"share_token"` // Unique token for sharing
-	PermissionType PermissionType `db:"permission_type" json:"permission_type"`
-	PasswordHash   string         `db:"password_hash" json:"-"` // Never expose in JSON
-	ExpiresAt      time.Time      `db:"expires_at" json:"expires_at"`
-	AccessCount    int64          `db:"access_count" json:"access_count"`
+	ID        string    `gorm:"primaryKey;size:15" json:"id"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated"`
+
+	User           string         `gorm:"size:15;not null;index" json:"user"` // Foreign key to users
+	ResourceType   ResourceType   `gorm:"size:20;not null" json:"resource_type"`
+	File           string         `gorm:"size:15;index" json:"file"`               // Foreign key to files (optional)
+	Directory      string         `gorm:"size:15;index" json:"directory"`          // Foreign key to directories (optional)
+	ShareToken     string         `gorm:"uniqueIndex;size:64;not null" json:"share_token"` // Unique token for sharing
+	PermissionType PermissionType `gorm:"size:20;not null" json:"permission_type"`
+	PasswordHash   string         `gorm:"size:255" json:"-"` // Never expose in JSON
+	ExpiresAt      *time.Time     `gorm:"index" json:"expires_at,omitempty"`
+	AccessCount    int64          `gorm:"default:0" json:"access_count"`
 }
 
 // TableName returns the table name for the Share model
@@ -44,15 +46,26 @@ func (s *Share) TableName() string {
 	return "shares"
 }
 
+// BeforeCreate hook to generate ID and share token if not set
+func (s *Share) BeforeCreate(tx *gorm.DB) error {
+	if s.ID == "" {
+		s.ID = GenerateID()
+	}
+	if s.ShareToken == "" {
+		s.ShareToken = GenerateShareToken()
+	}
+	return nil
+}
+
 // IsExpired checks if the share link has expired
 // Returns false if no expiration is set
 func (s *Share) IsExpired() bool {
-	// If ExpiresAt is zero value (not set), share never expires
-	if s.ExpiresAt.IsZero() {
+	// If ExpiresAt is nil (not set), share never expires
+	if s.ExpiresAt == nil {
 		return false
 	}
 	// Check if current time is after expiration
-	return time.Now().After(s.ExpiresAt)
+	return time.Now().After(*s.ExpiresAt)
 }
 
 // IsPasswordProtected checks if the share requires a password
@@ -91,22 +104,9 @@ func (s *Share) SetPassword(password string) error {
 }
 
 // IncrementAccessCount increments the access count for the share
-func (s *Share) IncrementAccessCount(app *pocketbase.PocketBase) error {
-	// Increment the counter
-	s.AccessCount++
-
-	// Update the record in the database
-	record, err := app.FindRecordById("shares", s.Id)
-	if err != nil {
-		return err
-	}
-
-	record.Set("access_count", s.AccessCount)
-	if err := app.Save(record); err != nil {
-		return err
-	}
-
-	return nil
+func (s *Share) IncrementAccessCount(db *gorm.DB) error {
+	// Use atomic increment to avoid race conditions
+	return db.Model(s).Update("access_count", gorm.Expr("access_count + ?", 1)).Error
 }
 
 // CanPerformAction checks if the share permission allows the specified action
