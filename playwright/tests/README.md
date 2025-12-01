@@ -37,14 +37,14 @@ The `run_dev.sh` script was reporting successful user creation:
 But the admin users page only showed the admin account, not the regular user.
 
 ### Root Cause Identified
-1. **PocketBase not initialized**: Application was waiting for superuser setup
+1. **Database not initialized**: Application was waiting for admin user setup
 2. **Wrong collection name**: Script was creating users in `users` collection but app looks in `superusers` collection
 3. **API appeared to succeed**: User creation API calls returned success but users weren't actually stored
 
 ### Fix Applied
 Updated `run_dev.sh` to:
-- Use PocketBase CLI for superuser creation: `./filesonthego superuser upsert`
-- Proper sequencing: Initialize PocketBase first, then create regular users
+- Use application CLI for admin user creation: `./filesonthego create-admin`
+- Proper sequencing: Initialize database first, then create regular users
 - Wait for initialization before creating regular users
 
 ## 🚀 Running the Tests

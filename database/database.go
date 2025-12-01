@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	_ "modernc.org/sqlite" // Pure Go SQLite driver
 )
 
 // DB is the global database instance
@@ -30,8 +32,19 @@ func Initialize(config Config) error {
 	// Configure GORM logger
 	gormLogger := logger.Default.LogMode(config.LogLevel)
 
-	// Open database connection
-	db, err := gorm.Open(sqlite.Open(config.DSN), &gorm.Config{
+	// Open database connection using modernc SQLite driver directly
+	sqlDB, err := sql.Open("sqlite", config.DSN)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// Configure connection pool
+	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(config.MaxOpenConns)
+	sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
+
+	// Create GORM instance
+	db, err := gorm.Open(sqlite.Dialector{Conn: sqlDB}, &gorm.Config{
 		Logger: gormLogger,
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
@@ -40,17 +53,6 @@ func Initialize(config Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-
-	// Get generic database object to configure connection pool
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get database object: %w", err)
-	}
-
-	// Configure connection pool
-	sqlDB.SetMaxIdleConns(config.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(config.MaxOpenConns)
-	sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
 
 	// Set global DB instance
 	DB = db

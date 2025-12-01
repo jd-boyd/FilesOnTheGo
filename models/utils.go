@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// GenerateID generates a unique ID similar to PocketBase's ID format
+// GenerateID generates a unique ID similar to UUID format
 // Uses a 15-character base62-like encoding
 func GenerateID() string {
 	// Generate a UUID v4

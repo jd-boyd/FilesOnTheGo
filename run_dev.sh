@@ -52,8 +52,8 @@ export S3_ACCESS_KEY=${MINIO_ROOT_USER}
 export S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
 export S3_USE_SSL=false
 
-# Database Configuration (PocketBase)
-export DB_PATH=/app/data/pb_data
+# Database Configuration (SQLite via GORM)
+export DB_PATH=/app/data/database.db
 
 # Upload and Security Configuration
 export MAX_UPLOAD_SIZE=104857600  # 100MB in bytes
@@ -234,7 +234,7 @@ podman run -d \
 echo "Waiting for FilesOnTheGo application to start..."
 max_wait=30
 for i in $(seq 1 $max_wait); do
-    if curl -s http://${HOST_IP}:8090/api/health > /dev/null 2>&1; then
+    if curl -s http://${HOST_IP}:${APP_PORT}/api/status > /dev/null 2>&1; then
         echo "Application is ready!"
         break
     fi
@@ -244,171 +244,39 @@ for i in $(seq 1 $max_wait); do
     sleep 1
 done
 
-# Initialize PocketBase superuser and create test accounts
-echo "Initializing PocketBase and creating test accounts..."
+# Create test users via API
+echo "Creating test user accounts..."
 
-# Method 1: Skip CLI approach for now - it has environment variable issues
-echo "  Method 1: Skipping CLI approach (known environment variable issue)"
-SUPERUSER_CREATED=false
+# Create admin user
+ADMIN_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://${HOST_IP}:${APP_PORT}/api/auth/register \
+     -H "Content-Type: application/json" \
+     -d "{\"email\":\"${ADMIN_EMAIL}\",\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\",\"passwordConfirm\":\"${ADMIN_PASSWORD}\"}")
 
-# Wait for application to be fully ready
-echo "  Waiting for PocketBase to be ready..."
-sleep 5
+ADMIN_HTTP_CODE="${ADMIN_RESPONSE: -3}"
 
-# Method 2: If CLI failed, check if PocketBase still needs initialization via web interface
-if [ "$SUPERUSER_CREATED" = "false" ]; then
-    echo "  Method 2: Checking if PocketBase needs initialization..."
-
-    # Wait for app to be fully ready and check logs
-    sleep 5
-    INIT_URL=$(podman logs filesonthego-app-dev 2>&1 | grep -o 'http://[^/]+/[/_/#/pbinstal/[^"]*' | tail -1)
-
-    if [ -n "$INIT_URL" ]; then
-        echo "  PocketBase needs initialization via installation URL"
-        echo "  Attempting to create superuser via installation API..."
-
-        # Extract token from the installation URL
-        TOKEN=$(echo "$INIT_URL" | sed 's/.*\/pbinstal\///')
-
-        if [ -n "$TOKEN" ]; then
-            # Try to create superuser via the installation API
-            echo "  Creating superuser via installation API..."
-            INSTALL_RESPONSE=$(curl -s -w "%{http_code}" -X POST "http://${HOST_IP}:8090/api/collections/superusers/confirm-email" \
-                 -H "Content-Type: application/json" \
-                 -d "{\"token\":\"${TOKEN}\",\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"passwordConfirm\":\"${ADMIN_PASSWORD}\"}")
-
-            INSTALL_HTTP_CODE="${INSTALL_RESPONSE: -3}"
-
-            if [ "$INSTALL_HTTP_CODE" = "200" ] || [ "$INSTALL_HTTP_CODE" = "201" ] || [ "$INSTALL_HTTP_CODE" = "204" ]; then
-                echo "  ✅ Superuser created via installation API"
-                SUPERUSER_CREATED=true
-            else
-                echo "  ⚠️  Installation API failed (HTTP $INSTALL_HTTP_CODE)"
-                echo "  Response: ${INSTALL_RESPONSE%???}"
-
-                # Try alternative approach - use superusers API directly
-                echo "  Trying direct superuser API approach..."
-                SUPERUSER_RESPONSE=$(curl -s -w "%{http_code}" -X POST "http://${HOST_IP}:8090/api/collections/superusers/records" \
-                     -H "Content-Type: application/json" \
-                     -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"passwordConfirm\":\"${ADMIN_PASSWORD}\"}")
-
-                SUPERUSER_HTTP_CODE="${SUPERUSER_RESPONSE: -3}"
-
-                if [ "$SUPERUSER_HTTP_CODE" = "200" ] || [ "$SUPERUSER_HTTP_CODE" = "201" ]; then
-                    echo "  ✅ Superuser created via direct API"
-                    SUPERUSER_CREATED=true
-                else
-                    echo "  ❌ All superuser creation methods failed"
-                    echo "  Manual setup required - visit: $INIT_URL"
-                    SUPERUSER_CREATED=false
-                fi
-            fi
-        else
-            echo "  ❌ Could not extract token from installation URL"
-            SUPERUSER_CREATED=false
-        fi
-
-        # If all methods failed, show manual setup instructions
-        if [ "$SUPERUSER_CREATED" = "false" ]; then
-            echo ""
-            echo "⚠️  POCKETBASE INITIALIZATION INCOMPLETE"
-            echo "   Cannot create users until superuser is set up"
-            echo ""
-
-            # Continue to show access info but indicate setup is incomplete
-            echo ""
-            echo "=========================================="
-            echo "=== Development Environment Ready ==="
-            echo "=== (SETUP INCOMPLETE - MANUAL INTERVENTION NEEDED) ==="
-            echo "=========================================="
-            echo ""
-            echo "📍 Access URLs:"
-            echo "  Application: http://${HOST_IP}:${APP_PORT}"
-            echo "  MinIO Console: http://localhost:9001"
-            echo ""
-            echo "🔧 MANUAL SETUP REQUIRED:"
-            echo "  1. Visit application URL above"
-            echo "  2. Create superuser account with these credentials:"
-            echo "     Email: ${ADMIN_EMAIL}"
-            echo "     Password: ${ADMIN_PASSWORD}"
-            echo "  3. Restart the script or create users manually"
-            echo ""
-            echo "============================================"
-            echo ""
-            echo "📋 Tailing application logs..."
-            echo "   Press Ctrl-C to stop and cleanup the environment"
-            echo ""
-
-            # Cleanup function
-            cleanup() {
-                echo ""
-                echo ""
-                echo "🛑 Shutting down development environment..."
-                echo "   Stopping pod..."
-                podman pod stop ${POD_NAME} 2>/dev/null
-                echo "   Removing pod..."
-                podman pod rm -f ${POD_NAME} 2>/dev/null
-                echo "✅ Development environment cleaned up"
-                exit 0
-            }
-
-            # Trap Ctrl-C and call cleanup
-            trap cleanup SIGINT SIGTERM
-
-            # Tail the application logs (this will block until Ctrl-C)
-            podman logs -f filesonthego-app-dev
-            exit 0
-        fi
-    else
-        echo "  ✅ PocketBase appears to be initialized"
-        SUPERUSER_CREATED=true
-    fi
+if [ "$ADMIN_HTTP_CODE" = "200" ] || [ "$ADMIN_HTTP_CODE" = "201" ]; then
+    echo "  ✅ Admin user created successfully"
+elif [ "$ADMIN_HTTP_CODE" = "400" ]; then
+    echo "  ℹ️  Admin user may already exist (HTTP 400)"
+else
+    echo "  ⚠️  Admin user creation issue (HTTP $ADMIN_HTTP_CODE)"
+    echo "  Response: ${ADMIN_RESPONSE%???}"
 fi
 
-# Only proceed with user creation if superuser was set up successfully
-if [ "$SUPERUSER_CREATED" = "true" ]; then
-    echo "  Method 3: Creating regular user via API..."
+# Create regular user
+USER_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://${HOST_IP}:${APP_PORT}/api/auth/register \
+     -H "Content-Type: application/json" \
+     -d "{\"email\":\"${USER_EMAIL}\",\"username\":\"user\",\"password\":\"${USER_PASSWORD}\",\"passwordConfirm\":\"${USER_PASSWORD}\"}")
 
-    # Create regular user account via API
-    USER_RESPONSE=$(curl -s -w "%{http_code}" -X POST http://${HOST_IP}:8090/api/collections/users/records \
-         -H "Content-Type: application/json" \
-         -d "{\"email\":\"${USER_EMAIL}\",\"username\":\"user\",\"password\":\"${USER_PASSWORD}\",\"passwordConfirm\":\"${USER_PASSWORD}\"}")
+USER_HTTP_CODE="${USER_RESPONSE: -3}"
 
-    USER_HTTP_CODE="${USER_RESPONSE: -3}"
-    if [ "$USER_HTTP_CODE" = "200" ] || [ "$USER_HTTP_CODE" = "201" ]; then
-        echo "  ✅ Regular user account created"
-    elif [ "$USER_HTTP_CODE" = "400" ]; then
-        echo "  ℹ️  Regular user may already exist (HTTP 400)"
-    else
-        echo "  ⚠️  Regular user creation issue (HTTP $USER_HTTP_CODE)"
-        echo "  Response: ${USER_RESPONSE%???}"
-    fi
-
-    # Verify both users exist
-    echo "  Verifying user creation..."
-    sleep 2
-
-    # Check admin user (should exist as superuser)
-    ADMIN_CHECK=$(curl -s -X GET "http://${HOST_IP}:8090/api/collections/superusers/records" \
-         -H "Content-Type: application/json" | grep -o "${ADMIN_EMAIL}" | head -1)
-
-    if [ "$ADMIN_CHECK" = "$ADMIN_EMAIL" ]; then
-        echo "  ✅ Admin superuser verified"
-    else
-        echo "  ❌ Admin superuser not found"
-    fi
-
-    # Check regular user
-    USER_CHECK=$(curl -s -X GET "http://${HOST_IP}:8090/api/collections/users/records?filter=email='${USER_EMAIL}'" \
-         -H "Content-Type: application/json" | grep -o "${USER_EMAIL}" | head -1)
-
-    if [ "$USER_CHECK" = "$USER_EMAIL" ]; then
-        echo "  ✅ Regular user verified in database"
-    else
-        echo "  ❌ Regular user not found in database"
-    fi
+if [ "$USER_HTTP_CODE" = "200" ] || [ "$USER_HTTP_CODE" = "201" ]; then
+    echo "  ✅ Regular user created successfully"
+elif [ "$USER_HTTP_CODE" = "400" ]; then
+    echo "  ℹ️  Regular user may already exist (HTTP 400)"
 else
-    echo "  ❌ Skipping user creation due to failed superuser setup"
+    echo "  ⚠️  Regular user creation issue (HTTP $USER_HTTP_CODE)"
+    echo "  Response: ${USER_RESPONSE%???}"
 fi
 
 echo ""

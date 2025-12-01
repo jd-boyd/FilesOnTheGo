@@ -170,7 +170,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("app_url", "http://localhost:8090")
 
 	// Database Configuration
-	v.SetDefault("db_path", "./pb_data")
+	v.SetDefault("db_path", "./filesonthego.db")
 
 	// Upload Configuration
 	v.SetDefault("max_upload_size", 100*1024*1024) // 100MB

@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	_ "modernc.org/sqlite" // Pure Go SQLite driver
 )
 
 // TestApp holds all the dependencies for testing
@@ -66,8 +68,13 @@ func SetupTestApp(t *testing.T) *TestApp {
 		TLSEnabled:      false,
 	}
 
-	// Initialize in-memory database
-	db, err := gorm.Open(sqlite.Open(dbPath+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)"), &gorm.Config{
+	// Initialize in-memory database with modernc SQLite driver
+	sqlDB, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)")
+	if err != nil {
+		require.NoError(t, err)
+	}
+
+	db, err := gorm.Open(sqlite.Dialector{Conn: sqlDB}, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)

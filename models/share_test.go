@@ -420,5 +420,5 @@ func TestResourceType_Constants(t *testing.T) {
 	assert.Equal(t, ResourceType("directory"), ResourceTypeDirectory)
 }
 
-// Note: IncrementAccessCount tests would require a real PocketBase instance
+// Note: IncrementAccessCount tests would require a real database instance
 // or mocking, so we'll rely on integration tests for that functionality.

@@ -238,7 +238,7 @@ docker-run:
 	@echo "Running Docker container..."
 	docker run -p 8090:8090 -v $(PWD)/pb_data:/pb_data filesonthego:latest
 
-# Database operations (using PocketBase)
+# Database operations
 .PHONY: db-migrate
 db-migrate: build
 	@echo "Running database migrations..."

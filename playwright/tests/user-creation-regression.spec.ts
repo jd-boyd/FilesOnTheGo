@@ -4,8 +4,8 @@ import { test, expect } from '@playwright/test';
  * Regression tests for the user creation issue
  *
  * Issue: run_dev.sh says normal user exists, but admin users page only shows admin account
- * Root cause: PocketBase wasn't initialized and users were being created in wrong collection
- * Fix: Updated run_dev.sh to properly initialize PocketBase and create users in correct collection
+ * Root cause: Database wasn't initialized and users were being created in wrong collection
+ * Fix: Updated run_dev.sh to properly initialize database and create users in correct collection
  */
 
 test.describe('User Creation Regression Tests', () => {

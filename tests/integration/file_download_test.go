@@ -14,15 +14,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Note: These are integration test placeholders that would require a full PocketBase setup
-// In a real implementation, these would use a test database and actual PocketBase instance
+// Note: These are integration test placeholders that would require a full database setup
+// In a real implementation, these would use a test database and actual application instance
 
 // TestFileDownload_Success tests successful file download with authentication
 func TestFileDownload_Success(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create test user
 	// 3. Upload a test file
 	// 4. Download the file
@@ -31,10 +31,10 @@ func TestFileDownload_Success(t *testing.T) {
 
 // TestFileDownload_WithShareToken tests download using a share token
 func TestFileDownload_WithShareToken(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create test user
 	// 3. Upload a test file
 	// 4. Create a read share link
@@ -45,10 +45,10 @@ func TestFileDownload_WithShareToken(t *testing.T) {
 
 // TestFileDownload_UploadOnlyShare_Denied tests that upload-only shares cannot download
 func TestFileDownload_UploadOnlyShare_Denied(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create test user and file
 	// 3. Create an upload-only share link
 	// 4. Attempt to download with upload-only token
@@ -57,10 +57,10 @@ func TestFileDownload_UploadOnlyShare_Denied(t *testing.T) {
 
 // TestFileDownload_ExpiredShare_Denied tests that expired shares cannot download
 func TestFileDownload_ExpiredShare_Denied(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create test user and file
 	// 3. Create a share link with past expiration
 	// 4. Attempt to download with expired token
@@ -69,10 +69,10 @@ func TestFileDownload_ExpiredShare_Denied(t *testing.T) {
 
 // TestFileDownload_UnauthorizedUser_Denied tests unauthorized access
 func TestFileDownload_UnauthorizedUser_Denied(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create user1 and upload file
 	// 3. Create user2
 	// 4. Attempt to download user1's file as user2
@@ -81,10 +81,10 @@ func TestFileDownload_UnauthorizedUser_Denied(t *testing.T) {
 
 // TestFileDownload_PreSignedURL_Valid tests pre-signed URL generation
 func TestFileDownload_PreSignedURL_Valid(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance and S3")
+	t.Skip("Integration test requires test database instance and S3")
 
 	// This test would:
-	// 1. Setup test PocketBase app and S3
+	// 1. Setup test application and S3
 	// 2. Create and upload test file
 	// 3. Request download (should redirect to pre-signed URL)
 	// 4. Verify redirect status and URL format
@@ -93,10 +93,10 @@ func TestFileDownload_PreSignedURL_Valid(t *testing.T) {
 
 // TestFileDownload_Streaming tests direct streaming mode
 func TestFileDownload_Streaming(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance and S3")
+	t.Skip("Integration test requires test database instance and S3")
 
 	// This test would:
-	// 1. Setup test PocketBase app and S3
+	// 1. Setup test application and S3
 	// 2. Create and upload test file with known content
 	// 3. Request download with stream=true parameter
 	// 4. Verify file is streamed (not redirected)
@@ -106,10 +106,10 @@ func TestFileDownload_Streaming(t *testing.T) {
 
 // TestBatchDownload_MultipleFiles tests batch download creates valid ZIP
 func TestBatchDownload_MultipleFiles(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance and S3")
+	t.Skip("Integration test requires test database instance and S3")
 
 	// This test would:
-	// 1. Setup test PocketBase app and S3
+	// 1. Setup test application and S3
 	// 2. Create user and upload multiple files
 	// 3. Request batch download with file IDs
 	// 4. Verify response is a ZIP file
@@ -119,10 +119,10 @@ func TestBatchDownload_MultipleFiles(t *testing.T) {
 
 // TestBatchDownload_PartialPermissions tests batch download with mixed permissions
 func TestBatchDownload_PartialPermissions(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create user1 with files
 	// 3. Create user2
 	// 4. Attempt batch download as user2 with mix of accessible/inaccessible files
@@ -131,10 +131,10 @@ func TestBatchDownload_PartialPermissions(t *testing.T) {
 
 // TestDirectoryDownload_RecursiveFiles tests directory download with subdirectories
 func TestDirectoryDownload_RecursiveFiles(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance and S3")
+	t.Skip("Integration test requires test database instance and S3")
 
 	// This test would:
-	// 1. Setup test PocketBase app and S3
+	// 1. Setup test application and S3
 	// 2. Create directory structure with subdirectories
 	// 3. Upload files to various levels
 	// 4. Request directory download
@@ -144,10 +144,10 @@ func TestDirectoryDownload_RecursiveFiles(t *testing.T) {
 
 // TestDirectoryDownload_EmptyDirectory tests download of empty directory
 func TestDirectoryDownload_EmptyDirectory(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create empty directory
 	// 3. Request directory download
 	// 4. Verify appropriate response (empty message or empty ZIP)
@@ -155,10 +155,10 @@ func TestDirectoryDownload_EmptyDirectory(t *testing.T) {
 
 // TestAccessLogging_DownloadLogged tests that downloads are logged
 func TestAccessLogging_DownloadLogged(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create file and share link
 	// 3. Download file using share token
 	// 4. Query share_access_logs collection
@@ -168,10 +168,10 @@ func TestAccessLogging_DownloadLogged(t *testing.T) {
 
 // TestAccessLogging_IPAndUserAgent tests logging captures IP and user agent
 func TestAccessLogging_IPAndUserAgent(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Create file and share link
 	// 3. Download with specific X-Forwarded-For and User-Agent headers
 	// 4. Verify log entry captures correct IP and user agent
@@ -179,10 +179,10 @@ func TestAccessLogging_IPAndUserAgent(t *testing.T) {
 
 // TestDownloadHeaders_ContentDisposition tests Content-Disposition header
 func TestDownloadHeaders_ContentDisposition(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app and S3
+	// 1. Setup test application and S3
 	// 2. Upload file with streaming
 	// 3. Download with inline=true
 	// 4. Verify Content-Disposition is "inline"
@@ -192,10 +192,10 @@ func TestDownloadHeaders_ContentDisposition(t *testing.T) {
 
 // TestDownloadHeaders_SecurityHeaders tests security headers
 func TestDownloadHeaders_SecurityHeaders(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance")
+	t.Skip("Integration test requires test database instance")
 
 	// This test would:
-	// 1. Setup test PocketBase app
+	// 1. Setup test application
 	// 2. Upload and stream a file
 	// 3. Verify X-Content-Type-Options: nosniff is set
 	// 4. Verify Cache-Control is appropriate
@@ -204,10 +204,10 @@ func TestDownloadHeaders_SecurityHeaders(t *testing.T) {
 
 // TestLargeFileDownload_Performance tests download of large files
 func TestLargeFileDownload_Performance(t *testing.T) {
-	t.Skip("Integration test requires PocketBase test instance and S3")
+	t.Skip("Integration test requires test database instance and S3")
 
 	// This test would:
-	// 1. Setup test PocketBase app and S3
+	// 1. Setup test application and S3
 	// 2. Upload a large file (e.g., 100MB)
 	// 3. Download via streaming
 	// 4. Verify download completes successfully

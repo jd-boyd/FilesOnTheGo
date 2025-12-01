@@ -4,7 +4,7 @@ This doc covers architecture, data models, and API design for FilesOnTheGo.
 
 ## Overview
 
-FilesOnTheGo is a self-hosted file storage service. Files go to S3-compatible storage, metadata lives in PocketBase's SQLite database. The goal is Nextcloud-like functionality with less complexity.
+FilesOnTheGo is a self-hosted file storage service. Files go to S3-compatible storage, metadata lives in a SQLite database managed by GORM. The goal is Nextcloud-like functionality with less complexity.
 
 Key features:
 - Upload/download files organized in directories
@@ -24,18 +24,25 @@ Key features:
 │         FilesOnTheGo Backend            │
 │                                         │
 │  ┌──────────────────────────────────┐  │
-│  │       PocketBase Core            │  │
-│  │  - Authentication                │  │
-│  │  - API Routes                    │  │
-│  │  - Database (SQLite)            │  │
+│  │         Gin Web Framework        │  │
+│  │  - HTTP Routing & Middleware     │  │
+│  │  - Request/Response Handling     │  │
 │  └──────────────────────────────────┘  │
 │                                         │
 │  ┌──────────────────────────────────┐  │
-│  │     Custom Extensions            │  │
+│  │         GORM ORM                 │  │
+│  │  - Database Models               │  │
+│  │  - Migrations                    │  │
+│  │  - Query Builder                 │  │
+│  └──────────────────────────────────┘  │
+│                                         │
+│  ┌──────────────────────────────────┐  │
+│  │     Custom Services              │  │
 │  │  - File Upload Handler           │  │
 │  │  - Share Link Generator          │  │
 │  │  - Permission Validator          │  │
 │  │  - S3 Client Integration         │  │
+│  │  - JWT Authentication            │  │
 │  └──────────────────────────────────┘  │
 └────────────┬────────────────────────────┘
              │
@@ -48,65 +55,95 @@ Key features:
 
 ## Tech Stack
 
-**Backend:** PocketBase (Go). Gives us auth, REST API, realtime subscriptions, and SQLite out of the box.
+**Backend:** Gin web framework + GORM ORM (Go). Provides HTTP routing, middleware, database models, and migrations.
+
+**Database:** SQLite with GORM for migrations and queries.
 
 **Storage:** S3-compatible (MinIO for dev, AWS/Backblaze/Wasabi for prod).
 
 **Frontend:** HTMX + Tailwind. Server-rendered pages with dynamic updates. Minimal JS—just drag-and-drop and clipboard stuff.
 
-**Libraries:** AWS SDK for Go (S3 ops), go-uuid (share tokens).
+**Libraries:** AWS SDK for Go (S3 ops), golang-jwt/jwt (JWT authentication), bcrypt (password hashing), go-uuid (share tokens).
 
 ## Data Models
 
-### Users (PocketBase built-in)
-Standard PocketBase user collection with email, username, password.
+### Users
+GORM model for user authentication and management.
+
+```go
+type User struct {
+    ID        uint      `gorm:"primaryKey" json:"id"`
+    Email     string    `gorm:"uniqueIndex;not null" json:"email"`
+    Username  string    `gorm:"uniqueIndex;not null" json:"username"`
+    Password  string    `gorm:"not null" json:"-"` // bcrypt hash, excluded from JSON
+    FirstName string    `json:"first_name"`
+    LastName  string    `json:"last_name"`
+    Quota     int64     `json:"quota"`        // bytes
+    Used      int64     `json:"used"`         // bytes used
+    IsActive  bool      `gorm:"default:true" json:"is_active"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+}
+```
 
 ### Files
-```javascript
-{
-  id: "string (auto)",
-  user: "relation(users)",
-  name: "string",
-  path: "string",                    // e.g., "/documents/work/report.pdf"
-  parent_directory: "relation(directories)",
-  size: "number",
-  mime_type: "string",
-  s3_key: "string",                  // unique key in S3
-  s3_bucket: "string",
-  checksum: "string",
-  created: "datetime",
-  updated: "datetime"
+```go
+type File struct {
+    ID             uint      `gorm:"primaryKey" json:"id"`
+    UserID         uint      `gorm:"not null;index" json:"user_id"`
+    User           User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Name           string    `gorm:"not null" json:"name"`
+    Path           string    `gorm:"not null" json:"path"` // e.g., "/documents/work/report.pdf"
+    ParentID       *uint     `gorm:"index" json:"parent_id"` // null for root
+    Parent         *Directory `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+    Size           int64     `gorm:"not null" json:"size"`
+    MimeType       string    `json:"mime_type"`
+    S3Key          string    `gorm:"uniqueIndex;not null" json:"s3_key"` // unique key in S3
+    S3Bucket       string    `gorm:"not null" json:"s3_bucket"`
+    Checksum       string    `json:"checksum"`
+    CreatedAt      time.Time `json:"created_at"`
+    UpdatedAt      time.Time `json:"updated_at"`
 }
 ```
 
 ### Directories
-```javascript
-{
-  id: "string (auto)",
-  user: "relation(users)",
-  name: "string",
-  path: "string",                    // e.g., "/documents/work"
-  parent_directory: "relation(directories)",  // null for root
-  created: "datetime",
-  updated: "datetime"
+```go
+type Directory struct {
+    ID         uint        `gorm:"primaryKey" json:"id"`
+    UserID     uint        `gorm:"not null;index" json:"user_id"`
+    User       User        `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    Name       string      `gorm:"not null" json:"name"`
+    Path       string      `gorm:"uniqueIndex;not null" json:"path"` // e.g., "/documents/work"
+    ParentID   *uint       `gorm:"index" json:"parent_id"` // null for root
+    Parent     *Directory  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+    CreatedAt  time.Time   `json:"created_at"`
+    UpdatedAt  time.Time   `json:"updated_at"`
+
+    // Associations
+    Files      []File      `gorm:"foreignKey:ParentID" json:"files,omitempty"`
+    Subdirs    []Directory `gorm:"foreignKey:ParentID" json:"subdirs,omitempty"`
 }
 ```
 
 ### Shares
-```javascript
-{
-  id: "string (auto)",
-  user: "relation(users)",           // owner
-  resource_type: "file | directory",
-  file: "relation(files)",
-  directory: "relation(directories)",
-  share_token: "string (unique)",    // UUID for the link
-  permission_type: "read | read_upload | upload_only",
-  password_hash: "string",           // optional, bcrypt
-  expires_at: "datetime",            // optional
-  access_count: "number",
-  created: "datetime",
-  updated: "datetime"
+```go
+type Share struct {
+    ID             uint       `gorm:"primaryKey" json:"id"`
+    UserID         uint       `gorm:"not null;index" json:"user_id"`
+    User           User       `gorm:"foreignKey:UserID" json:"user,omitempty"`
+    ResourceType   string     `gorm:"not null;check:resource_type IN ('file','directory')" json:"resource_type"`
+    FileID         *uint      `gorm:"index" json:"file_id,omitempty"`
+    File           *File      `gorm:"foreignKey:FileID" json:"file,omitempty"`
+    DirectoryID    *uint      `gorm:"index" json:"directory_id,omitempty"`
+    Directory      *Directory `gorm:"foreignKey:DirectoryID" json:"directory,omitempty"`
+    ShareToken     string     `gorm:"uniqueIndex;not null" json:"share_token"` // UUID for the link
+    PermissionType string     `gorm:"not null;check:permission_type IN ('read','read_upload','upload_only')" json:"permission_type"`
+    PasswordHash   *string    `json:"password_hash,omitempty"` // optional, bcrypt
+    ExpiresAt      *time.Time `json:"expires_at,omitempty"` // optional
+    AccessCount    int64      `gorm:"default:0" json:"access_count"`
+    IsActive       bool       `gorm:"default:true" json:"is_active"`
+    CreatedAt      time.Time  `json:"created_at"`
+    UpdatedAt      time.Time  `json:"updated_at"`
 }
 ```
 
@@ -118,10 +155,11 @@ This keeps users isolated, makes files uniquely identifiable, and preserves orig
 
 ## API
 
-### Auth (PocketBase built-in)
-- `POST /api/collections/users/auth-with-password` - Login
-- `POST /api/collections/users/auth-refresh` - Refresh token
-- `POST /api/collections/users/records` - Register
+### Auth (Custom JWT)
+- `POST /api/auth/login` - Login (email + password)
+- `POST /api/auth/register` - Register user
+- `POST /api/auth/refresh` - Refresh JWT token
+- `POST /api/auth/logout` - Logout (revoke token)
 
 ### Files
 
@@ -249,7 +287,7 @@ Permission checks happen in this order:
 2. Backend validates auth + permissions
 3. Generate S3 key: `users/{user_id}/{file_id}/{filename}`
 4. Stream to S3
-5. Save metadata to PocketBase
+5. Save metadata to database
 6. Return success
 
 **Download flow:**
@@ -262,7 +300,7 @@ Pre-signed URLs mean downloads go directly from S3 to the client—no proxying t
 
 ## Security Notes
 
-**Auth:** Use PocketBase's JWT. Validate on every request. Rate limit sensitive endpoints.
+**Auth:** Use custom JWT implementation with golang-jwt/jwt. Validate on every request. Rate limit sensitive endpoints.
 
 **Uploads:** Validate file types and sizes. Sanitize filenames (strip path components, special chars). Enforce per-user quotas.
 
@@ -286,9 +324,9 @@ Single server setup:
 ```
 Nginx (HTTPS termination)
     ↓
-FilesOnTheGo (port 8090)
+FilesOnTheGo (standalone Go binary, port 8090)
     ↓
-SQLite (embedded)
+SQLite (embedded, managed by GORM)
     ↓
 S3 Storage (over network)
 ```
@@ -318,7 +356,7 @@ app_port: "8090"
 app_environment: development
 app_url: http://localhost:8090
 
-db_path: ./pb_data
+database_url: ./filesonthego.db
 max_upload_size: 104857600  # 100MB
 jwt_secret: change-me-in-production
 
@@ -351,12 +389,12 @@ See `config.yaml.example` and `.env.example` for all options.
 ## Roadmap
 
 **Phase 1 (MVP):**
-- [x] PocketBase project setup
+- [x] Gin + GORM project setup
 - [x] S3 client integration
-- [x] Data models
+- [x] Data models (GORM)
 - [ ] File upload/download
 - [ ] Directory navigation
-- [ ] Basic auth
+- [ ] Basic JWT auth
 - [ ] HTMX file browser
 - [ ] Read-only sharing
 - [ ] Password-protected shares

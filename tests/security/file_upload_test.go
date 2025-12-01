@@ -431,7 +431,7 @@ func TestSecurity_HTMLInjection(t *testing.T) {
 
 func TestSecurity_SQLInjection(t *testing.T) {
 	// Test that filenames don't cause SQL injection
-	// PocketBase uses parameterized queries, but we should still validate
+	// GORM uses parameterized queries, but we should still validate
 
 	tests := []struct {
 		name     string

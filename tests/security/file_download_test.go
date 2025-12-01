@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Note: These are security test placeholders that would require a full PocketBase setup
+// Note: These are security test placeholders that would require a full database setup
 // In a real implementation, these would test actual security vulnerabilities
 
 // TestFileDownload_PathTraversal tests protection against path traversal attacks
 func TestFileDownload_PathTraversal(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would attempt various path traversal attacks:
 	// - ../../../etc/passwd
@@ -25,7 +25,7 @@ func TestFileDownload_PathTraversal(t *testing.T) {
 
 // TestFileDownload_Unauthorized_NoAuth tests access without authentication
 func TestFileDownload_Unauthorized_NoAuth(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Create a private file
@@ -36,7 +36,7 @@ func TestFileDownload_Unauthorized_NoAuth(t *testing.T) {
 
 // TestFileDownload_Unauthorized_WrongUser tests access by different user
 func TestFileDownload_Unauthorized_WrongUser(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. User A uploads file
@@ -47,7 +47,7 @@ func TestFileDownload_Unauthorized_WrongUser(t *testing.T) {
 
 // TestFileDownload_ShareToken_Invalid tests invalid share token handling
 func TestFileDownload_ShareToken_Invalid(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would attempt downloads with:
 	// - Non-existent token
@@ -59,7 +59,7 @@ func TestFileDownload_ShareToken_Invalid(t *testing.T) {
 
 // TestFileDownload_ShareToken_Expired tests expired share token
 func TestFileDownload_ShareToken_Expired(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Create share with past expiration
@@ -70,7 +70,7 @@ func TestFileDownload_ShareToken_Expired(t *testing.T) {
 
 // TestFileDownload_ShareToken_UploadOnly tests upload-only share enforcement
 func TestFileDownload_ShareToken_UploadOnly(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Create upload-only share
@@ -82,7 +82,7 @@ func TestFileDownload_ShareToken_UploadOnly(t *testing.T) {
 
 // TestFileDownload_ShareToken_RateLimit tests rate limiting on share token attempts
 func TestFileDownload_ShareToken_RateLimit(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Create share with password
@@ -93,7 +93,7 @@ func TestFileDownload_ShareToken_RateLimit(t *testing.T) {
 
 // TestFileDownload_FileEnumeration tests protection against file ID enumeration
 func TestFileDownload_FileEnumeration(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Attempt to download many sequential file IDs
@@ -104,7 +104,7 @@ func TestFileDownload_FileEnumeration(t *testing.T) {
 
 // TestFileDownload_SQLInjection tests SQL injection prevention
 func TestFileDownload_SQLInjection(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would attempt SQL injection via:
 	// - File ID parameter
@@ -115,7 +115,7 @@ func TestFileDownload_SQLInjection(t *testing.T) {
 
 // TestFileDownload_XSS tests XSS prevention in responses
 func TestFileDownload_XSS(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Upload file with XSS-like filename
@@ -126,7 +126,7 @@ func TestFileDownload_XSS(t *testing.T) {
 
 // TestFileDownload_ContentType tests Content-Type security
 func TestFileDownload_ContentType(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Upload file with misleading extension (e.g., .html)
@@ -137,7 +137,7 @@ func TestFileDownload_ContentType(t *testing.T) {
 
 // TestFileDownload_HeaderInjection tests HTTP header injection prevention
 func TestFileDownload_HeaderInjection(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would attempt header injection via:
 	// - Filename with newlines
@@ -148,7 +148,7 @@ func TestFileDownload_HeaderInjection(t *testing.T) {
 
 // TestFileDownload_DirectoryTraversal_S3Key tests S3 key path traversal
 func TestFileDownload_DirectoryTraversal_S3Key(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Attempt to manipulate S3 key in database
@@ -158,7 +158,7 @@ func TestFileDownload_DirectoryTraversal_S3Key(t *testing.T) {
 
 // TestFileDownload_TimingAttack tests protection against timing attacks
 func TestFileDownload_TimingAttack(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Measure response time for valid vs invalid share tokens
@@ -168,7 +168,7 @@ func TestFileDownload_TimingAttack(t *testing.T) {
 
 // TestFileDownload_CSRF tests CSRF protection
 func TestFileDownload_CSRF(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Verify GET requests (downloads) don't have side effects
@@ -178,7 +178,7 @@ func TestFileDownload_CSRF(t *testing.T) {
 
 // TestFileDownload_ClickJacking tests clickjacking protection
 func TestFileDownload_ClickJacking(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would verify:
 	// 1. Appropriate X-Frame-Options header is set
@@ -188,7 +188,7 @@ func TestFileDownload_ClickJacking(t *testing.T) {
 
 // TestFileDownload_SensitiveDataExposure tests against data exposure
 func TestFileDownload_SensitiveDataExposure(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would verify:
 	// 1. Error messages don't leak sensitive info
@@ -199,7 +199,7 @@ func TestFileDownload_SensitiveDataExposure(t *testing.T) {
 
 // TestFileDownload_MassAssignment tests mass assignment protection
 func TestFileDownload_MassAssignment(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Attempt to modify file ownership via request
@@ -209,7 +209,7 @@ func TestFileDownload_MassAssignment(t *testing.T) {
 
 // TestFileDownload_IDOR tests Insecure Direct Object Reference
 func TestFileDownload_IDOR(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. User A creates file
@@ -220,7 +220,7 @@ func TestFileDownload_IDOR(t *testing.T) {
 
 // TestFileDownload_RateLimiting tests rate limiting on downloads
 func TestFileDownload_RateLimiting(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Make many download requests rapidly
@@ -231,7 +231,7 @@ func TestFileDownload_RateLimiting(t *testing.T) {
 
 // TestFileDownload_LogsDoNotContainSecrets tests logging security
 func TestFileDownload_LogsDoNotContainSecrets(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would verify:
 	// 1. Auth tokens are not logged
@@ -242,7 +242,7 @@ func TestFileDownload_LogsDoNotContainSecrets(t *testing.T) {
 
 // TestFileDownload_AccessControl_Privilege tests privilege escalation
 func TestFileDownload_AccessControl_Privilege(t *testing.T) {
-	t.Skip("Security test requires PocketBase test instance")
+	t.Skip("Security test requires test database instance")
 
 	// This test would:
 	// 1. Create regular user account

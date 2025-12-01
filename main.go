@@ -252,7 +252,7 @@ func main() {
 		}
 
 		// Not authenticated, redirect to login
-		c.Redirect(http.StatusFound, "/login")
+		c.Redirect(http.StatusMovedPermanently, "/login")
 	})
 
 	logger.Info().Msg("Routes configured successfully")
