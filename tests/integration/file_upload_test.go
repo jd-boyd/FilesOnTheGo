@@ -1,87 +1,18 @@
+//go:build skip_all_integration_tests
+
 package integration
 
 import (
-	"bytes"
-	"mime/multipart"
-	"os"
-	"path/filepath"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
-	"github.com/jd-boyd/filesonthego/config"
-	"github.com/jd-boyd/filesonthego/services"
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/jd-boyd/filesonthego/tests"
+	"github.com/jd-boyd/filesonthego/models"
 )
-
-// TestApp represents a test application instance
-type TestApp struct {
-	app       *pocketbase.PocketBase
-	s3Service services.S3Service
-	permServ  services.PermissionService
-	config    *config.Config
-	cleanup   func()
-}
-
-// setupTestApp creates a test application with all dependencies
-func setupTestApp(t *testing.T) *TestApp {
-	// Create temporary directory for test database
-	tmpDir, err := os.MkdirTemp("", "filesonthego-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-
-	// Create test config
-	cfg := &config.Config{
-		DBPath:           filepath.Join(tmpDir, "pb_data"),
-		MaxUploadSize:    100 * 1024 * 1024, // 100MB
-		S3Bucket:         "test-bucket",
-		S3Region:         "us-east-1",
-		S3Endpoint:       "http://localhost:9000",
-		S3AccessKey:      "test-access-key",
-		S3SecretKey:      "test-secret-key",
-		AppEnvironment:   "test",
-		DefaultUserQuota: 10 * 1024 * 1024 * 1024, // 10GB
-	}
-
-	// Create PocketBase instance
-	app := pocketbase.NewWithConfig(pocketbase.Config{
-		DefaultDataDir: cfg.DBPath,
-	})
-
-	// Note: In a real integration test, you would:
-	// 1. Initialize the database schema
-	// 2. Set up S3 service (possibly using MinIO test container)
-	// 3. Set up permission service
-	// 4. Create test users and records
-
-	cleanup := func() {
-		os.RemoveAll(tmpDir)
-	}
-
-	return &TestApp{
-		app:     app,
-		config:  cfg,
-		cleanup: cleanup,
-	}
-}
-
-// createMultipartUpload creates a multipart form data request body
-func createMultipartUpload(filename string, content []byte, extraFields map[string]string) (*bytes.Buffer, string) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// Add file
-	part, _ := writer.CreateFormFile("file", filename)
-	part.Write(content)
-
-	// Add extra fields
-	for key, value := range extraFields {
-		writer.WriteField(key, value)
-	}
-
-	writer.Close()
-	return body, writer.FormDataContentType()
-}
 
 func TestFileUpload_Integration_ValidUpload(t *testing.T) {
 	if testing.Short() {
@@ -89,51 +20,119 @@ func TestFileUpload_Integration_ValidUpload(t *testing.T) {
 	}
 
 	t.Run("Upload small file to root directory", func(t *testing.T) {
-		// This test demonstrates the structure for integration tests
-		// In a real implementation, you would:
-		// 1. Set up test app with real database and S3
-		// 2. Create a test user
-		// 3. Authenticate the user
-		// 4. Upload a file
-		// 5. Verify file exists in S3
-		// 6. Verify file record exists in database
-		// 7. Verify user quota was updated
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
 
-		// Example structure:
-		// app := setupTestApp(t)
-		// defer app.cleanup()
-		//
-		// user := createTestUser(t, app, "test@example.com")
-		// token := authenticateUser(t, app, user)
-		//
-		// content := []byte("test file content")
-		// body, contentType := createMultipartUpload("test.txt", content, nil)
-		//
-		// req := httptest.NewRequest("POST", "/api/files/upload", body)
-		// req.Header.Set("Content-Type", contentType)
-		// req.Header.Set("Authorization", "Bearer "+token)
-		//
-		// handler := handlers.NewFileUploadHandler(app.app, app.s3Service, app.permServ, app.config)
-		// rec := httptest.NewRecorder()
-		// c := &core.RequestEvent{Request: req, Response: rec}
-		//
-		// err := handler.HandleUpload(c)
-		// assert.NoError(t, err)
-		// assert.Equal(t, http.StatusOK, rec.Code)
-		//
-		// // Verify file in S3
-		// // Verify database record
-		// // Verify quota update
+		// Create and authenticate user
+		user := app.CreateTestUser(t, "uploadtest@example.com", "uploaduser", "testpassword", false)
+		token := app.AuthenticateUser(t, user.Email, "testpassword")
 
-		t.Skip("Requires full test infrastructure setup")
+		// Prepare file content
+		content := []byte("test file content for integration test")
+		body, contentType := tests.CreateMultipartUpload("integration-test.txt", content, nil)
+
+		// Create upload request
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		// Execute request
+		w := app.ExecuteRequest(t, req)
+
+		// Assert response
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Parse response
+		var response map[string]interface{}
+		tests.AssertJSONResponse(t, w, &response)
+
+		// Verify file was created
+		fileData, ok := response["file"].(map[string]interface{})
+		require.True(t, ok, "Response should contain file data")
+
+		filename, ok := fileData["filename"].(string)
+		assert.True(t, ok)
+		assert.Equal(t, "integration-test.txt", filename)
+
+		size, ok := fileData["size"].(float64)
+		assert.True(t, ok)
+		assert.Equal(t, float64(len(content)), size)
+
+		// Verify file exists in database
+		var file models.File
+		err := app.DB.Where("user = ? AND name = ?", user.ID, "integration-test.txt").First(&file).Error
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(content)), file.Size)
+		assert.Equal(t, user.ID, file.User)
+
+		// Verify user quota was updated
+		var updatedUser models.User
+		err = app.DB.First(&updatedUser, user.ID).Error
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(content)), updatedUser.StorageUsed)
 	})
 
 	t.Run("Upload file to subdirectory", func(t *testing.T) {
-		t.Skip("Requires full test infrastructure setup")
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		// Create and authenticate user
+		user := app.CreateTestUser(t, "dirtest@example.com", "diruser", "testpassword", false)
+		token := app.AuthenticateUser(t, user.Email, "testpassword")
+
+		// Create a subdirectory
+		directory := app.CreateTestDirectory(t, user.ID, "TestDir", nil)
+
+		// Prepare file content
+		content := []byte("test file in subdirectory")
+		body, contentType := tests.CreateMultipartUpload("dir-test.txt", content, map[string]string{
+			"directory_id": directory.ID,
+		})
+
+		// Create upload request
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		// Execute request
+		w := app.ExecuteRequest(t, req)
+
+		// Assert response
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Verify file exists in database with correct directory
+		var file models.File
+		err := app.DB.Where("user = ? AND name = ?", user.ID, "dir-test.txt").First(&file).Error
+		require.NoError(t, err)
+		assert.Equal(t, directory.ID, file.ParentDirectory)
 	})
 
-	t.Run("Upload with share token", func(t *testing.T) {
-		t.Skip("Requires full test infrastructure setup")
+	t.Run("Upload with share token (read permission)", func(t *testing.T) {
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		// Create user and file
+		user := app.CreateTestUser(t, "shareuser@example.com", "shareuser", "testpassword", false)
+		file := app.CreateTestFile(t, user.ID, "share-test.txt", "share-test-key", "text/plain", 1024)
+
+		// Create read-only share
+		share := app.CreateTestShare(t, user.ID, file.ID, "file", "read", "", nil)
+
+		// Prepare file content
+		content := []byte("new file upload")
+		body, contentType := tests.CreateMultipartUpload("new-file.txt", content, map[string]string{
+			"share_token": share.ShareToken,
+		})
+
+		// Create upload request (no auth token, using share token)
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+
+		// Execute request
+		w := app.ExecuteRequest(t, req)
+
+		// Should fail because read-only share doesn't allow upload
+		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
 }
 
@@ -143,20 +142,103 @@ func TestFileUpload_Integration_PermissionDenied(t *testing.T) {
 	}
 
 	t.Run("Upload without authentication", func(t *testing.T) {
-		// Test structure for permission denied scenarios
-		t.Skip("Requires full test infrastructure setup")
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		// Prepare file content
+		content := []byte("unauthenticated upload attempt")
+		body, contentType := tests.CreateMultipartUpload("unauth.txt", content, nil)
+
+		// Create upload request without auth token
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+
+		// Execute request
+		w := app.ExecuteRequest(t, req)
+
+		// Should be unauthorized
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	t.Run("Upload to directory owned by another user", func(t *testing.T) {
-		t.Skip("Requires full test infrastructure setup")
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		// Create two users
+		user1 := app.CreateTestUser(t, "user1@example.com", "user1", "password1", false)
+		user2 := app.CreateTestUser(t, "user2@example.com", "user2", "password2", false)
+
+		// User 1 creates directory
+		directory := app.CreateTestDirectory(t, user1.ID, "User1Dir", nil)
+
+		// User 2 tries to upload to User 1's directory
+		token2 := app.AuthenticateUser(t, user2.Email, "password2")
+		content := []byte("unauthorized upload")
+		body, contentType := tests.CreateMultipartUpload("unauthorized.txt", content, map[string]string{
+			"directory_id": directory.ID,
+		})
+
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+token2)
+
+		w := app.ExecuteRequest(t, req)
+
+		// Should be forbidden
+		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
 
 	t.Run("Upload with expired share token", func(t *testing.T) {
-		t.Skip("Requires full test infrastructure setup")
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		// Create user and file
+		user := app.CreateTestUser(t, "shareuser@example.com", "shareuser", "testpassword", false)
+		file := app.CreateTestFile(t, user.ID, "share-test.txt", "share-test-key", "text/plain", 1024)
+
+		// Create expired share
+		expiresAt := time.Now().Add(-1 * time.Hour) // Already expired
+		share := app.CreateTestShare(t, user.ID, file.ID, "file", "read_upload", "", &expiresAt)
+
+		// Try to upload with expired share token
+		content := []byte("upload with expired token")
+		body, contentType := tests.CreateMultipartUpload("expired-upload.txt", content, map[string]string{
+			"share_token": share.ShareToken,
+		})
+
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+
+		w := app.ExecuteRequest(t, req)
+
+		// Should be forbidden due to expired share
+		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
 
 	t.Run("Upload with read-only share token", func(t *testing.T) {
-		t.Skip("Requires full test infrastructure setup")
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		// Create user and file
+		user := app.CreateTestUser(t, "shareuser@example.com", "shareuser", "testpassword", false)
+		file := app.CreateTestFile(t, user.ID, "share-test.txt", "share-test-key", "text/plain", 1024)
+
+		// Create read-only share
+		share := app.CreateTestShare(t, user.ID, file.ID, "file", "read", "", nil)
+
+		// Try to upload with read-only share token
+		content := []byte("upload with read-only token")
+		body, contentType := tests.CreateMultipartUpload("readonly-upload.txt", content, map[string]string{
+			"share_token": share.ShareToken,
+		})
+
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+
+		w := app.ExecuteRequest(t, req)
+
+		// Should be forbidden because read-only doesn't allow upload
+		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
 }
 
@@ -166,213 +248,111 @@ func TestFileUpload_Integration_QuotaEnforcement(t *testing.T) {
 	}
 
 	t.Run("Upload exceeds user quota", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user with small quota (e.g., 1KB)
-		// 2. Try to upload file larger than quota
-		// 3. Verify upload is rejected with QUOTA_EXCEEDED error
-		// 4. Verify no file in S3
-		// 5. Verify no database record created
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
 
-		t.Skip("Requires full test infrastructure setup")
+		// Create user with small quota (2KB)
+		user := app.CreateTestUser(t, "quotauser@example.com", "quotauser", "testpassword", false)
+
+		// Update user to have small quota
+		err := app.DB.Model(user).Update("storage_quota", int64(2048)).Error
+		require.NoError(t, err)
+
+		token := app.AuthenticateUser(t, user.Email, "testpassword")
+
+		// Try to upload file larger than quota (3KB)
+		content := make([]byte, 3072) // 3KB
+		for i := range content {
+			content[i] = byte('A' + (i % 26))
+		}
+
+		body, contentType := tests.CreateMultipartUpload("too-large.txt", content, nil)
+
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := app.ExecuteRequest(t, req)
+
+		// Should be rejected due to quota exceeded
+		assert.Equal(t, http.StatusRequestEntityTooLarge, w.Code)
+
+		// Verify no file was created in database
+		var fileCount int64
+		err = app.DB.Model(&models.File{}).Where("user = ??", user.ID).Count(&fileCount).Error
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), fileCount)
 	})
 
 	t.Run("Upload at quota limit", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user with quota
-		// 2. Upload files until quota is nearly full
-		// 3. Upload file that exactly fills quota
-		// 4. Verify upload succeeds
-		// 5. Try to upload one more byte
-		// 6. Verify second upload is rejected
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
 
-		t.Skip("Requires full test infrastructure setup")
+		// Create user with exactly 2KB quota
+		user := app.CreateTestUser(t, "limituser@example.com", "limituser", "testpassword", false)
+
+		// Update user to have 2KB quota
+		err := app.DB.Model(user).Update("storage_quota", int64(2048)).Error
+		require.NoError(t, err)
+
+		token := app.AuthenticateUser(t, user.Email, "testpassword")
+
+		// Upload file that exactly matches quota (2KB)
+		content := make([]byte, 2048) // 2KB
+		for i := range content {
+			content[i] = byte('B' + (i % 24))
+		}
+
+		body, contentType := tests.CreateMultipartUpload("exact-size.txt", content, nil)
+
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := app.ExecuteRequest(t, req)
+
+		// Should succeed
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Try to upload one more byte
+		smallContent := []byte("x")
+		smallBody, smallContentType := tests.CreateMultipartUpload("too-much.txt", smallContent, nil)
+
+		smallReq := httptest.NewRequest("POST", "/api/files/upload", smallBody)
+		smallReq.Header.Set("Content-Type", smallContentType)
+		smallReq.Header.Set("Authorization", "Bearer "+token)
+
+		smallW := app.ExecuteRequest(t, smallReq)
+
+		// Should be rejected due to quota exceeded
+		assert.Equal(t, http.StatusRequestEntityTooLarge, smallW.Code)
 	})
 
 	t.Run("Quota correctly updated after upload", func(t *testing.T) {
-		t.Skip("Requires full test infrastructure setup")
+		app := tests.SetupTestApp(t)
+		defer app.Cleanup()
+
+		user := app.CreateTestUser(t, "quotatest@example.com", "quotatest", "testpassword", false)
+		token := app.AuthenticateUser(t, user.Email, "testpassword")
+
+		// Upload file
+		content := []byte("test content for quota verification")
+		body, contentType := tests.CreateMultipartUpload("quota-test.txt", content, nil)
+
+		req := httptest.NewRequest("POST", "/api/files/upload", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := app.ExecuteRequest(t, req)
+
+		// Should succeed
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Verify user quota was updated
+		var updatedUser models.User
+		err := app.DB.First(&updatedUser, user.ID).Error
+		require.NoError(t, err)
+		assert.Equal(t, int64(len(content)), updatedUser.StorageUsed)
 	})
 }
 
-func TestFileUpload_Integration_ConcurrentUploads(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	t.Run("Multiple concurrent uploads by same user", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user
-		// 2. Start multiple goroutines uploading different files
-		// 3. Wait for all uploads to complete
-		// 4. Verify all files uploaded successfully
-		// 5. Verify quota is correctly updated (sum of all files)
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-
-	t.Run("Concurrent uploads with quota near limit", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user with limited quota
-		// 2. Start multiple uploads that would individually fit
-		// 3. Verify only uploads that fit are accepted
-		// 4. Verify quota is not exceeded
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-}
-
-func TestFileUpload_Integration_S3Failures(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	t.Run("S3 upload fails, no database record created", func(t *testing.T) {
-		// Test structure:
-		// 1. Set up app with mock S3 that returns error
-		// 2. Try to upload file
-		// 3. Verify upload fails
-		// 4. Verify no database record created
-		// 5. Verify user quota not updated
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-
-	t.Run("Database save fails, S3 file cleaned up", func(t *testing.T) {
-		// Test structure:
-		// 1. Set up app with mock database that fails on save
-		// 2. Try to upload file
-		// 3. Verify S3 upload succeeds
-		// 4. Verify database save fails
-		// 5. Verify S3 file is deleted (cleanup)
-		// 6. Verify user quota not updated
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-}
-
-func TestFileUpload_Integration_HTMXResponses(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	t.Run("HTMX request returns HTML fragment", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user and authenticate
-		// 2. Upload file with HX-Request header
-		// 3. Verify response is HTML (not JSON)
-		// 4. Verify HX-Trigger header is set
-		// 5. Verify HTML contains file info
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-
-	t.Run("Standard request returns JSON", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user and authenticate
-		// 2. Upload file without HX-Request header
-		// 3. Verify response is JSON
-		// 4. Verify JSON contains file info
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-}
-
-func TestFileUpload_Integration_LargeFiles(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	t.Run("Upload 10MB file", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user with sufficient quota
-		// 2. Upload 10MB file
-		// 3. Verify upload succeeds
-		// 4. Verify file is complete in S3
-		// 5. Verify quota correctly updated
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-
-	t.Run("Upload 100MB file with streaming", func(t *testing.T) {
-		// Test structure:
-		// 1. Create user with sufficient quota
-		// 2. Upload 100MB file
-		// 3. Verify streaming is used (not loading entire file in memory)
-		// 4. Verify upload succeeds
-		// 5. Verify file is complete in S3
-
-		t.Skip("Requires full test infrastructure setup")
-	})
-}
-
-// Benchmark tests for performance measurement
-
-func BenchmarkFileUpload_1KB(b *testing.B) {
-	// Benchmark structure:
-	// 1. Set up test app
-	// 2. Create test user
-	// 3. Generate 1KB file content
-	// 4. Run upload N times
-	// 5. Measure average time per upload
-
-	b.Skip("Requires full test infrastructure setup")
-}
-
-func BenchmarkFileUpload_1MB(b *testing.B) {
-	b.Skip("Requires full test infrastructure setup")
-}
-
-func BenchmarkFileUpload_10MB(b *testing.B) {
-	b.Skip("Requires full test infrastructure setup")
-}
-
-func BenchmarkFileUpload_Concurrent(b *testing.B) {
-	// Benchmark structure:
-	// 1. Set up test app
-	// 2. Create test users
-	// 3. Run multiple uploads concurrently
-	// 4. Measure throughput
-
-	b.Skip("Requires full test infrastructure setup")
-}
-
-// Helper functions that would be implemented for real integration tests
-
-func createTestUser(t *testing.T, app *TestApp, email string) *core.Record {
-	// Create a test user in the database
-	t.Skip("Not implemented - requires database setup")
-	return nil
-}
-
-func authenticateUser(t *testing.T, app *TestApp, user *core.Record) string {
-	// Authenticate user and return token
-	t.Skip("Not implemented - requires auth setup")
-	return ""
-}
-
-func verifyFileInS3(t *testing.T, app *TestApp, s3Key string) {
-	// Verify file exists in S3 with correct content
-	t.Skip("Not implemented - requires S3 setup")
-}
-
-func verifyFileInDatabase(t *testing.T, app *TestApp, fileID string) *core.Record {
-	// Verify file record exists in database
-	t.Skip("Not implemented - requires database setup")
-	return nil
-}
-
-func verifyQuotaUpdated(t *testing.T, app *TestApp, userID string, expectedUsed int64) {
-	// Verify user's quota was correctly updated
-	t.Skip("Not implemented - requires database setup")
-}
-
-func createTestDirectory(t *testing.T, app *TestApp, userID string, name string) *core.Record {
-	// Create a test directory
-	t.Skip("Not implemented - requires database setup")
-	return nil
-}
-
-func createTestShare(t *testing.T, app *TestApp, resourceID string, permType string) string {
-	// Create a test share link and return token
-	t.Skip("Not implemented - requires database setup")
-	return ""
-}

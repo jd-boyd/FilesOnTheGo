@@ -1,3 +1,5 @@
+//go:build unit
+
 package unit
 
 import (
@@ -5,17 +7,17 @@ import (
 	"testing"
 
 	"github.com/jd-boyd/filesonthego/assets"
-	"github.com/jd-boyd/filesonthego/handlers"
+	handlers_gin "github.com/jd-boyd/filesonthego/handlers_gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // getTemplateRenderer returns a template renderer using embedded assets
-func getTemplateRenderer(t *testing.T) *handlers.TemplateRenderer {
+func getTemplateRenderer(t *testing.T) *handlers_gin.TemplateRenderer {
 	t.Helper()
 	templatesFS, err := assets.TemplatesFS()
 	require.NoError(t, err, "Failed to get templates filesystem")
-	return handlers.NewTemplateRendererFromFS(templatesFS)
+	return handlers_gin.NewTemplateRendererFromFS(templatesFS)
 }
 
 func TestTemplateRenderer_LoadTemplates(t *testing.T) {
@@ -34,7 +36,7 @@ func TestTemplateRenderer_RenderLogin(t *testing.T) {
 	require.NoError(t, err, "Failed to load templates")
 
 	// Prepare test data
-	data := &handlers.TemplateData{
+	data := &handlers_gin.TemplateData{
 		Title: "Login - FilesOnTheGo",
 	}
 
@@ -59,7 +61,7 @@ func TestTemplateRenderer_RenderRegister(t *testing.T) {
 	require.NoError(t, err, "Failed to load templates")
 
 	// Prepare test data
-	data := &handlers.TemplateData{
+	data := &handlers_gin.TemplateData{
 		Title: "Register - FilesOnTheGo",
 	}
 
@@ -85,7 +87,7 @@ func TestTemplateRenderer_RenderDashboard(t *testing.T) {
 	require.NoError(t, err, "Failed to load templates")
 
 	// Prepare test data
-	data := &handlers.TemplateData{
+	data := &handlers_gin.TemplateData{
 		Title:          "Dashboard - FilesOnTheGo",
 		StorageUsed:    "0 MB",
 		StorageQuota:   "10 GB",

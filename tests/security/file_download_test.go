@@ -1,3 +1,5 @@
+//go:build security
+
 package security
 
 import (

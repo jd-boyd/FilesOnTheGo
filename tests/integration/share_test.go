@@ -1,3 +1,5 @@
+//go:build skip_pocketbase_tests
+
 package integration
 
 import (

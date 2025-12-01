@@ -101,6 +101,9 @@ func (r *TemplateRenderer) LoadTemplates() error {
 			"layouts/base.html",
 			"layouts/app.html",
 			"pages/dashboard.html",
+			"components/loading.html",
+			"components/header.html",
+			"components/breadcrumb.html",
 		},
 		"files": {
 			"layouts/base.html",

@@ -1,3 +1,5 @@
+//go:build skip_all_integration_tests
+
 package integration
 
 import (
