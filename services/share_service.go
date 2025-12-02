@@ -2,572 +2,201 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jd-boyd/filesonthego/models"
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/core"
-	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/rs/zerolog"
+	"gorm.io/gorm"
 )
 
-// ShareService defines the interface for share link management
-type ShareService interface {
-	CreateShare(params CreateShareParams) (*ShareInfo, error)
-	GetShareByToken(token string) (*ShareInfo, error)
-	GetShareByID(shareID string) (*ShareInfo, error)
-	ValidateShareAccess(token, password string) (*ShareAccessInfo, error)
-	RevokeShare(shareID, userID string) error
-	ListUserShares(userID, resourceType string) ([]*ShareInfo, error)
-	UpdateShareExpiration(shareID, userID string, expiresAt *time.Time) error
-	GetShareAccessLogs(shareID, userID string) ([]*ShareAccessLog, error)
-	LogShareAccess(shareID, action, fileName, ipAddress, userAgent string) error
-	IncrementAccessCount(shareID string) error
+// ShareService handles share link operations
+type ShareService struct {
+	db     *gorm.DB
+	logger zerolog.Logger
 }
 
-// CreateShareParams contains parameters for creating a new share
-type CreateShareParams struct {
-	UserID         string
-	ResourceType   string // "file" or "directory"
-	ResourceID     string
-	PermissionType string     // "read", "read_upload", "upload_only"
-	Password       string     // optional
-	ExpiresAt      *time.Time // optional
-}
-
-// ShareInfo represents complete share information
-type ShareInfo struct {
-	ID                  string                `json:"id"`
-	UserID              string                `json:"user_id"`
-	ResourceType        models.ResourceType   `json:"resource_type"`
-	ResourceID          string                `json:"resource_id"`
-	ShareToken          string                `json:"share_token"`
-	PermissionType      models.PermissionType `json:"permission_type"`
-	ExpiresAt           *time.Time            `json:"expires_at,omitempty"`
-	AccessCount         int64                 `json:"access_count"`
-	Created             time.Time             `json:"created"`
-	Updated             time.Time             `json:"updated"`
-	IsExpired           bool                  `json:"is_expired"`
-	IsPasswordProtected bool                  `json:"is_password_protected"`
-}
-
-// ShareAccessInfo represents the result of validating a share access attempt
-type ShareAccessInfo struct {
-	ShareID        string
-	ResourceType   string
-	ResourceID     string
-	PermissionType string
-	ExpiresAt      *time.Time
-	IsValid        bool
-	ErrorMessage   string
-}
-
-// ShareAccessLog represents a log entry for share access
-type ShareAccessLog struct {
-	ID         string    `json:"id"`
-	ShareID    string    `json:"share_id"`
-	Action     string    `json:"action"`
-	FileName   string    `json:"file_name,omitempty"`
-	IPAddress  string    `json:"ip_address"`
-	UserAgent  string    `json:"user_agent"`
-	AccessedAt time.Time `json:"accessed_at"`
-}
-
-// ShareServiceImpl implements the ShareService interface
-type ShareServiceImpl struct {
-	app *pocketbase.PocketBase
-}
-
-// NewShareService creates a new share service instance
-func NewShareService(app *pocketbase.PocketBase) ShareService {
-	return &ShareServiceImpl{
-		app: app,
+// NewShareService creates a new share service
+func NewShareService(db *gorm.DB, logger zerolog.Logger) *ShareService {
+	return &ShareService{
+		db:     db,
+		logger: logger,
 	}
 }
 
-// CreateShare creates a new share link with the specified parameters
-func (s *ShareServiceImpl) CreateShare(params CreateShareParams) (*ShareInfo, error) {
-	// Validate parameters
-	if params.UserID == "" {
-		return nil, errors.New("user ID is required")
+// CreateShare creates a new share link
+func (s *ShareService) CreateShare(userID, resourceID string, resourceType models.ResourceType, permissionType models.PermissionType, password string, expiresAt *time.Time) (*models.Share, error) {
+	share := &models.Share{
+		User:           userID,
+		ResourceType:   resourceType,
+		PermissionType: permissionType,
+		ExpiresAt:      expiresAt,
 	}
-	if params.ResourceType == "" {
-		return nil, errors.New("resource type is required")
-	}
-	if params.ResourceID == "" {
-		return nil, errors.New("resource ID is required")
-	}
-	if params.PermissionType == "" {
-		return nil, errors.New("permission type is required")
-	}
-
-	// Validate resource type
-	if params.ResourceType != "file" && params.ResourceType != "directory" {
-		return nil, errors.New("resource type must be 'file' or 'directory'")
-	}
-
-	// Validate permission type
-	if params.PermissionType != "read" && params.PermissionType != "read_upload" && params.PermissionType != "upload_only" {
-		return nil, errors.New("permission type must be 'read', 'read_upload', or 'upload_only'")
-	}
-
-	// Verify user owns the resource
-	collection := "files"
-	if params.ResourceType == "directory" {
-		collection = "directories"
-	}
-
-	resource, err := s.app.FindRecordById(collection, params.ResourceID)
-	if err != nil {
-		log.Error().Err(err).Str("resource_id", params.ResourceID).Str("resource_type", params.ResourceType).Msg("Resource not found")
-		return nil, fmt.Errorf("%s not found", params.ResourceType)
-	}
-
-	if resource.GetString("user") != params.UserID {
-		log.Warn().Str("user_id", params.UserID).Str("resource_id", params.ResourceID).Msg("User does not own resource")
-		return nil, errors.New("you do not have permission to share this resource")
-	}
-
-	// Validate expiration is in future
-	if params.ExpiresAt != nil && params.ExpiresAt.Before(time.Now()) {
-		return nil, errors.New("expiration date must be in the future")
-	}
-
-	// Generate unique share token (UUID v4)
-	shareToken := uuid.New().String()
-
-	// Create share record
-	sharesCollection, err := s.app.FindCollectionByNameOrId("shares")
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to find shares collection")
-		return nil, fmt.Errorf("failed to find shares collection: %w", err)
-	}
-	if sharesCollection == nil {
-		return nil, fmt.Errorf("shares collection not found")
-	}
-	record := core.NewRecord(sharesCollection)
-
-	record.Set("user", params.UserID)
-	record.Set("resource_type", params.ResourceType)
-	record.Set("permission_type", params.PermissionType)
-	record.Set("share_token", shareToken)
-	record.Set("access_count", 0)
 
 	// Set resource ID based on type
-	if params.ResourceType == "file" {
-		record.Set("file", params.ResourceID)
-		record.Set("directory", "")
+	if resourceType == models.ResourceTypeFile {
+		share.File = resourceID
 	} else {
-		record.Set("directory", params.ResourceID)
-		record.Set("file", "")
+		share.Directory = resourceID
 	}
 
-	// Hash password if provided (bcrypt cost 12 for security)
-	if params.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(params.Password), 12)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to hash password")
-			return nil, errors.New("failed to hash password")
+	// Set password if provided
+	if password != "" {
+		if err := share.SetPassword(password); err != nil {
+			return nil, err
 		}
-		record.Set("password_hash", string(hash))
-	} else {
-		record.Set("password_hash", "")
 	}
 
-	// Set expiration
-	if params.ExpiresAt != nil {
-		record.Set("expires_at", *params.ExpiresAt)
-	} else {
-		record.Set("expires_at", time.Time{})
+	// Create share in database (ShareToken will be auto-generated by BeforeCreate hook)
+	if err := s.db.Create(share).Error; err != nil {
+		return nil, err
 	}
 
-	// Save share record
-	if err := s.app.Save(record); err != nil {
-		log.Error().Err(err).Msg("Failed to create share")
-		return nil, errors.New("failed to create share")
-	}
-
-	log.Info().
-		Str("share_id", record.Id).
-		Str("user_id", params.UserID).
-		Str("resource_type", params.ResourceType).
-		Str("resource_id", params.ResourceID).
-		Str("permission_type", params.PermissionType).
+	s.logger.Info().
+		Str("share_id", share.ID).
+		Str("user_id", userID).
+		Str("resource_type", string(resourceType)).
+		Str("permission_type", string(permissionType)).
 		Msg("Share created successfully")
 
-	// Convert to ShareInfo
-	return s.recordToShareInfo(record), nil
+	return share, nil
 }
 
-// GetShareByToken retrieves a share by its token
-func (s *ShareServiceImpl) GetShareByToken(token string) (*ShareInfo, error) {
-	if token == "" {
-		return nil, errors.New("share token is required")
-	}
-
-	record, err := s.app.FindFirstRecordByData("shares", "share_token", token)
-	if err != nil {
-		log.Debug().Err(err).Str("share_token", token).Msg("Share not found")
-		return nil, errors.New("share not found")
-	}
-
-	return s.recordToShareInfo(record), nil
-}
-
-// GetShareByID retrieves a share by its ID
-func (s *ShareServiceImpl) GetShareByID(shareID string) (*ShareInfo, error) {
-	if shareID == "" {
-		return nil, errors.New("share ID is required")
-	}
-
-	record, err := s.app.FindRecordById("shares", shareID)
-	if err != nil {
-		log.Debug().Err(err).Str("share_id", shareID).Msg("Share not found")
-		return nil, errors.New("share not found")
-	}
-
-	return s.recordToShareInfo(record), nil
-}
-
-// ValidateShareAccess validates a share token and optional password
-func (s *ShareServiceImpl) ValidateShareAccess(token, password string) (*ShareAccessInfo, error) {
-	// Check for empty or missing token - treat as invalid for security
-	if token == "" {
-		return &ShareAccessInfo{
-			IsValid:      false,
-			ErrorMessage: "Invalid share link",
-		}, nil
-	}
-
-	// Get share by token
-	share, err := s.GetShareByToken(token)
-	if err != nil {
-		return &ShareAccessInfo{
-			IsValid:      false,
-			ErrorMessage: "Invalid share link",
-		}, nil
-	}
-
-	// Check if expired
-	if share.IsExpired {
-		log.Info().Str("share_id", share.ID).Msg("Expired share accessed")
-		return &ShareAccessInfo{
-			ShareID:      share.ID,
-			ResourceType: string(share.ResourceType),
-			ResourceID:   share.ResourceID,
-			IsValid:      false,
-			ErrorMessage: "This share link has expired",
-		}, nil
-	}
-
-	// Check password if required
-	if share.IsPasswordProtected {
-		if password == "" {
-			return &ShareAccessInfo{
-				ShareID:      share.ID,
-				ResourceType: string(share.ResourceType),
-				ResourceID:   share.ResourceID,
-				IsValid:      false,
-				ErrorMessage: "Password required",
-			}, nil
+// GetShare retrieves a share by ID
+func (s *ShareService) GetShare(shareID string) (*models.Share, error) {
+	var share models.Share
+	if err := s.db.First(&share, "id = ?", shareID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("share not found")
 		}
-
-		// Get the record to access password hash
-		record, err := s.app.FindRecordById("shares", share.ID)
-		if err != nil {
-			return nil, errors.New("failed to validate password")
-		}
-
-		passwordHash := record.GetString("password_hash")
-
-		// Use constant-time comparison to prevent timing attacks
-		err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
-		if err != nil {
-			log.Warn().Str("share_id", share.ID).Msg("Invalid password attempt")
-			return &ShareAccessInfo{
-				ShareID:      share.ID,
-				ResourceType: string(share.ResourceType),
-				ResourceID:   share.ResourceID,
-				IsValid:      false,
-				ErrorMessage: "Invalid password",
-			}, nil
-		}
+		return nil, err
 	}
-
-	// Valid access
-	return &ShareAccessInfo{
-		ShareID:        share.ID,
-		ResourceType:   string(share.ResourceType),
-		ResourceID:     share.ResourceID,
-		PermissionType: string(share.PermissionType),
-		ExpiresAt:      share.ExpiresAt,
-		IsValid:        true,
-		ErrorMessage:   "",
-	}, nil
+	return &share, nil
 }
 
-// RevokeShare deletes a share, preventing further access
-func (s *ShareServiceImpl) RevokeShare(shareID, userID string) error {
-	if shareID == "" {
-		return errors.New("share ID is required")
+// GetShareByToken retrieves a share by token
+func (s *ShareService) GetShareByToken(shareToken string) (*models.Share, error) {
+	var share models.Share
+	if err := s.db.Where("share_token = ?", shareToken).First(&share).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("share not found")
+		}
+		return nil, err
 	}
-	if userID == "" {
-		return errors.New("user ID is required")
-	}
-
-	// Get share record
-	share, err := s.app.FindRecordById("shares", shareID)
-	if err != nil {
-		log.Debug().Err(err).Str("share_id", shareID).Msg("Share not found")
-		return errors.New("share not found")
-	}
-
-	// Verify user owns the share
-	if share.GetString("user") != userID {
-		log.Warn().Str("user_id", userID).Str("share_id", shareID).Msg("User does not own share")
-		return errors.New("you do not have permission to revoke this share")
-	}
-
-	// Delete the share
-	if err := s.app.Delete(share); err != nil {
-		log.Error().Err(err).Str("share_id", shareID).Msg("Failed to revoke share")
-		return errors.New("failed to revoke share")
-	}
-
-	log.Info().Str("share_id", shareID).Str("user_id", userID).Msg("Share revoked successfully")
-	return nil
+	return &share, nil
 }
 
-// ListUserShares returns all shares created by a user
-func (s *ShareServiceImpl) ListUserShares(userID, resourceType string) ([]*ShareInfo, error) {
-	if userID == "" {
-		return nil, errors.New("user ID is required")
+// ListUserShares lists all shares created by a user
+func (s *ShareService) ListUserShares(userID string) ([]*models.Share, error) {
+	var shares []*models.Share
+	if err := s.db.Where("user = ?", userID).Order("created_at DESC").Find(&shares).Error; err != nil {
+		return nil, err
 	}
-
-	// Build filter
-	filter := fmt.Sprintf("user = '%s'", userID)
-	if resourceType != "" {
-		filter = fmt.Sprintf("%s && resource_type = '%s'", filter, resourceType)
-	}
-
-	// Query shares
-	records, err := s.app.FindRecordsByFilter(
-		"shares",
-		filter,
-		"-created", // Order by created date, newest first
-		0,
-		0,
-	)
-	if err != nil {
-		log.Error().Err(err).Str("user_id", userID).Msg("Failed to list shares")
-		return nil, errors.New("failed to list shares")
-	}
-
-	// Convert to ShareInfo
-	shares := make([]*ShareInfo, 0, len(records))
-	for _, record := range records {
-		shares = append(shares, s.recordToShareInfo(record))
-	}
-
 	return shares, nil
 }
 
-// UpdateShareExpiration updates the expiration date of a share
-func (s *ShareServiceImpl) UpdateShareExpiration(shareID, userID string, expiresAt *time.Time) error {
-	if shareID == "" {
-		return errors.New("share ID is required")
+// RevokeShare deletes a share
+func (s *ShareService) RevokeShare(shareID string) error {
+	result := s.db.Delete(&models.Share{}, "id = ?", shareID)
+	if result.Error != nil {
+		return result.Error
 	}
-	if userID == "" {
-		return errors.New("user ID is required")
-	}
-
-	// Get share record
-	share, err := s.app.FindRecordById("shares", shareID)
-	if err != nil {
-		log.Debug().Err(err).Str("share_id", shareID).Msg("Share not found")
+	if result.RowsAffected == 0 {
 		return errors.New("share not found")
 	}
 
-	// Verify user owns the share
-	if share.GetString("user") != userID {
-		log.Warn().Str("user_id", userID).Str("share_id", shareID).Msg("User does not own share")
-		return errors.New("you do not have permission to update this share")
+	s.logger.Info().
+		Str("share_id", shareID).
+		Msg("Share revoked successfully")
+
+	return nil
+}
+
+// UpdateShare updates share properties
+func (s *ShareService) UpdateShare(shareID string, updates map[string]interface{}) (*models.Share, error) {
+	share, err := s.GetShare(shareID)
+	if err != nil {
+		return nil, err
 	}
 
-	// Validate expiration is in future
-	if expiresAt != nil && expiresAt.Before(time.Now()) {
-		return errors.New("expiration date must be in the future")
+	// Handle password update separately
+	if password, ok := updates["password"].(string); ok {
+		if err := share.SetPassword(password); err != nil {
+			return nil, err
+		}
+		delete(updates, "password")
+		updates["password_hash"] = share.PasswordHash
 	}
 
-	// Update expiration
-	if expiresAt != nil {
-		share.Set("expires_at", *expiresAt)
-	} else {
-		share.Set("expires_at", time.Time{})
+	if err := s.db.Model(share).Updates(updates).Error; err != nil {
+		return nil, err
 	}
 
-	if err := s.app.Save(share); err != nil {
-		log.Error().Err(err).Str("share_id", shareID).Msg("Failed to update share expiration")
-		return errors.New("failed to update share expiration")
+	// Reload share
+	return s.GetShare(shareID)
+}
+
+// IncrementAccessCount increments the access count for a share
+func (s *ShareService) IncrementAccessCount(shareID string) error {
+	var share models.Share
+	if err := s.db.First(&share, "id = ?", shareID).Error; err != nil {
+		return err
 	}
 
-	log.Info().Str("share_id", shareID).Msg("Share expiration updated successfully")
+	return share.IncrementAccessCount(s.db)
+}
+
+// LogShareAccess logs an access to a share
+func (s *ShareService) LogShareAccess(shareID, ipAddress, userAgent, action, fileName string) error {
+	log := &models.ShareAccessLog{
+		Share:     shareID,
+		IPAddress: ipAddress,
+		UserAgent: userAgent,
+		Action:    action,
+		FileName:  fileName,
+	}
+
+	if err := s.db.Create(log).Error; err != nil {
+		s.logger.Error().
+			Err(err).
+			Str("share_id", shareID).
+			Str("action", action).
+			Msg("Failed to log share access")
+		return err
+	}
+
 	return nil
 }
 
 // GetShareAccessLogs retrieves access logs for a share
-func (s *ShareServiceImpl) GetShareAccessLogs(shareID, userID string) ([]*ShareAccessLog, error) {
-	if shareID == "" {
-		return nil, errors.New("share ID is required")
-	}
-	if userID == "" {
-		return nil, errors.New("user ID is required")
+func (s *ShareService) GetShareAccessLogs(shareID string, limit int) ([]*models.ShareAccessLog, error) {
+	var logs []*models.ShareAccessLog
+	query := s.db.Where("share = ?", shareID).Order("created_at DESC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
 	}
 
-	// Verify user owns the share
-	share, err := s.app.FindRecordById("shares", shareID)
-	if err != nil {
-		return nil, errors.New("share not found")
-	}
-
-	if share.GetString("user") != userID {
-		return nil, errors.New("you do not have permission to view these logs")
-	}
-
-	// Query access logs
-	records, err := s.app.FindRecordsByFilter(
-		"share_access_logs",
-		fmt.Sprintf("share = '%s'", shareID),
-		"-accessed_at", // Order by accessed date, newest first
-		100,            // Limit to last 100 entries
-		0,
-	)
-	if err != nil {
-		log.Error().Err(err).Str("share_id", shareID).Msg("Failed to get access logs")
-		return nil, errors.New("failed to get access logs")
-	}
-
-	// Convert to ShareAccessLog
-	logs := make([]*ShareAccessLog, 0, len(records))
-	for _, record := range records {
-		logs = append(logs, &ShareAccessLog{
-			ID:         record.Id,
-			ShareID:    record.GetString("share"),
-			Action:     record.GetString("action"),
-			FileName:   record.GetString("file_name"),
-			IPAddress:  record.GetString("ip_address"),
-			UserAgent:  record.GetString("user_agent"),
-			AccessedAt: record.GetDateTime("accessed_at").Time(),
-		})
+	if err := query.Find(&logs).Error; err != nil {
+		return nil, err
 	}
 
 	return logs, nil
 }
 
-// LogShareAccess logs an access event for a share
-func (s *ShareServiceImpl) LogShareAccess(shareID, action, fileName, ipAddress, userAgent string) error {
-	if shareID == "" {
-		return errors.New("share ID is required")
-	}
-	if action == "" {
-		return errors.New("action is required")
-	}
+// CleanupExpiredShares removes expired shares (should be run periodically)
+func (s *ShareService) CleanupExpiredShares() (int64, error) {
+	now := time.Now()
+	result := s.db.Where("expires_at IS NOT NULL AND expires_at < ?", now).Delete(&models.Share{})
 
-	// Create access log entry
-	collection, err := s.app.FindCollectionByNameOrId("share_access_logs")
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to find share_access_logs collection")
-		return fmt.Errorf("failed to find share_access_logs collection: %w", err)
-	}
-	if collection == nil {
-		// Collection doesn't exist yet, skip logging
-		log.Warn().Msg("share_access_logs collection not found, skipping access logging")
-		return nil
+	if result.Error != nil {
+		return 0, result.Error
 	}
 
-	record := core.NewRecord(collection)
-	record.Set("share", shareID)
-	record.Set("action", action)
-	record.Set("file_name", fileName)
-	record.Set("ip_address", ipAddress)
-	record.Set("user_agent", userAgent)
-	record.Set("accessed_at", time.Now())
-
-	if err := s.app.Save(record); err != nil {
-		log.Error().Err(err).Str("share_id", shareID).Msg("Failed to log share access")
-		// Don't return error - logging failure shouldn't block access
-		return nil
+	if result.RowsAffected > 0 {
+		s.logger.Info().
+			Int64("count", result.RowsAffected).
+			Msg("Cleaned up expired shares")
 	}
 
-	log.Debug().
-		Str("share_id", shareID).
-		Str("action", action).
-		Str("ip_address", ipAddress).
-		Msg("Share access logged")
-
-	return nil
-}
-
-// IncrementAccessCount increments the access count for a share
-func (s *ShareServiceImpl) IncrementAccessCount(shareID string) error {
-	if shareID == "" {
-		return errors.New("share ID is required")
-	}
-
-	share, err := s.app.FindRecordById("shares", shareID)
-	if err != nil {
-		return errors.New("share not found")
-	}
-
-	currentCount := int64(share.GetInt("access_count"))
-	share.Set("access_count", currentCount+1)
-
-	if err := s.app.Save(share); err != nil {
-		log.Error().Err(err).Str("share_id", shareID).Msg("Failed to increment access count")
-		// Don't return error - counter increment failure shouldn't block access
-		return nil
-	}
-
-	return nil
-}
-
-// recordToShareInfo converts a PocketBase record to ShareInfo
-func (s *ShareServiceImpl) recordToShareInfo(record *core.Record) *ShareInfo {
-	// Determine resource ID based on type
-	resourceType := record.GetString("resource_type")
-	resourceID := record.GetString("file")
-	if resourceType == "directory" {
-		resourceID = record.GetString("directory")
-	}
-
-	// Parse expiration
-	var expiresAt *time.Time
-	expiresAtTime := record.GetDateTime("expires_at")
-	if !expiresAtTime.IsZero() {
-		t := expiresAtTime.Time()
-		expiresAt = &t
-	}
-
-	// Check if expired
-	isExpired := false
-	if expiresAt != nil && expiresAt.Before(time.Now()) {
-		isExpired = true
-	}
-
-	return &ShareInfo{
-		ID:                  record.Id,
-		UserID:              record.GetString("user"),
-		ResourceType:        models.ResourceType(resourceType),
-		ResourceID:          resourceID,
-		ShareToken:          record.GetString("share_token"),
-		PermissionType:      models.PermissionType(record.GetString("permission_type")),
-		ExpiresAt:           expiresAt,
-		AccessCount:         int64(record.GetInt("access_count")),
-		Created:             record.GetDateTime("created").Time(),
-		Updated:             record.GetDateTime("updated").Time(),
-		IsExpired:           isExpired,
-		IsPasswordProtected: record.GetString("password_hash") != "",
-	}
+	return result.RowsAffected, nil
 }

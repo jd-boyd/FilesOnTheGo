@@ -8,6 +8,10 @@ import (
 )
 
 func TestShare_IsExpired(t *testing.T) {
+	expiredTime := time.Now().Add(-1 * time.Hour)
+	futureTime := time.Now().Add(1 * time.Hour)
+	justExpiredTime := time.Now().Add(-1 * time.Second)
+
 	tests := []struct {
 		name     string
 		share    *Share
@@ -16,28 +20,28 @@ func TestShare_IsExpired(t *testing.T) {
 		{
 			name: "expired share",
 			share: &Share{
-				ExpiresAt: time.Now().Add(-1 * time.Hour),
+				ExpiresAt: &expiredTime,
 			},
 			expected: true,
 		},
 		{
 			name: "not expired",
 			share: &Share{
-				ExpiresAt: time.Now().Add(1 * time.Hour),
+				ExpiresAt: &futureTime,
 			},
 			expected: false,
 		},
 		{
 			name: "no expiration",
 			share: &Share{
-				ExpiresAt: time.Time{}, // Zero value
+				ExpiresAt: nil,
 			},
 			expected: false,
 		},
 		{
 			name: "expires exactly now (edge case)",
 			share: &Share{
-				ExpiresAt: time.Now().Add(-1 * time.Second),
+				ExpiresAt: &justExpiredTime,
 			},
 			expected: true,
 		},
@@ -361,6 +365,9 @@ func TestShare_CanUpload(t *testing.T) {
 }
 
 func TestShare_IsValid(t *testing.T) {
+	futureTime := time.Now().Add(1 * time.Hour)
+	expiredTime := time.Now().Add(-1 * time.Hour)
+
 	tests := []struct {
 		name     string
 		share    *Share
@@ -369,21 +376,21 @@ func TestShare_IsValid(t *testing.T) {
 		{
 			name: "valid - not expired",
 			share: &Share{
-				ExpiresAt: time.Now().Add(1 * time.Hour),
+				ExpiresAt: &futureTime,
 			},
 			expected: true,
 		},
 		{
 			name: "invalid - expired",
 			share: &Share{
-				ExpiresAt: time.Now().Add(-1 * time.Hour),
+				ExpiresAt: &expiredTime,
 			},
 			expected: false,
 		},
 		{
 			name: "valid - no expiration",
 			share: &Share{
-				ExpiresAt: time.Time{},
+				ExpiresAt: nil,
 			},
 			expected: true,
 		},
@@ -413,5 +420,5 @@ func TestResourceType_Constants(t *testing.T) {
 	assert.Equal(t, ResourceType("directory"), ResourceTypeDirectory)
 }
 
-// Note: IncrementAccessCount tests would require a real PocketBase instance
+// Note: IncrementAccessCount tests would require a real database instance
 // or mocking, so we'll rely on integration tests for that functionality.

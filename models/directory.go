@@ -6,23 +6,34 @@ import (
 	"errors"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/core"
+	"gorm.io/gorm"
 )
 
 // Directory represents a directory record in the database
 type Directory struct {
-	core.BaseModel
-	Name            string `db:"name" json:"name"`
-	Path            string `db:"path" json:"path"`
-	User            string `db:"user" json:"user"`                         // Relation ID
-	ParentDirectory string `db:"parent_directory" json:"parent_directory"` // Relation ID (optional)
+	ID        string    `gorm:"primaryKey;size:15" json:"id"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated"`
+
+	Name            string `gorm:"size:255;not null;index" json:"name"`
+	Path            string `gorm:"size:1024;not null;index" json:"path"`
+	User            string `gorm:"size:15;not null;index" json:"user"` // Foreign key to users
+	ParentDirectory string `gorm:"size:15;index" json:"parent_directory"` // Foreign key to directories (optional)
 }
 
 // TableName returns the table name for the Directory model
 func (d *Directory) TableName() string {
 	return "directories"
+}
+
+// BeforeCreate hook to generate ID if not set
+func (d *Directory) BeforeCreate(tx *gorm.DB) error {
+	if d.ID == "" {
+		d.ID = GenerateID()
+	}
+	return nil
 }
 
 // IsOwnedBy checks if the directory is owned by the specified user
@@ -87,7 +98,7 @@ type Breadcrumb struct {
 
 // GetBreadcrumbs returns the breadcrumb trail for the directory
 // Returns an ordered list from root to current directory
-func (d *Directory) GetBreadcrumbs(app *pocketbase.PocketBase) ([]*Breadcrumb, error) {
+func (d *Directory) GetBreadcrumbs(db *gorm.DB) ([]*Breadcrumb, error) {
 	breadcrumbs := []*Breadcrumb{}
 
 	// Start with the current directory
@@ -98,7 +109,7 @@ func (d *Directory) GetBreadcrumbs(app *pocketbase.PocketBase) ([]*Breadcrumb, e
 		// Add current directory to the front of breadcrumbs
 		breadcrumbs = append([]*Breadcrumb{
 			{
-				ID:   current.Id,
+				ID:   current.ID,
 				Name: current.Name,
 				Path: current.GetFullPath(),
 			},
@@ -110,19 +121,11 @@ func (d *Directory) GetBreadcrumbs(app *pocketbase.PocketBase) ([]*Breadcrumb, e
 		}
 
 		// Fetch parent directory
-		record, err := app.FindRecordById("directories", current.ParentDirectory)
-		if err != nil {
+		parent := &Directory{}
+		if err := db.First(parent, "id = ?", current.ParentDirectory).Error; err != nil {
 			// Parent not found, break the chain
 			break
 		}
-
-		// Convert record to Directory struct
-		parent := &Directory{}
-		parent.Id = record.Id
-		parent.Name = record.GetString("name")
-		parent.Path = record.GetString("path")
-		parent.User = record.GetString("user")
-		parent.ParentDirectory = record.GetString("parent_directory")
 
 		current = parent
 	}

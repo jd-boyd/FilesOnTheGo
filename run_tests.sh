@@ -68,8 +68,8 @@ export S3_ACCESS_KEY=${MINIO_ROOT_USER}
 export S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
 export S3_USE_SSL=false
 
-# Database Configuration (PocketBase)
-export DB_PATH=/app/data/pb_data
+# Database Configuration (SQLite)
+export DB_PATH=/app/data/database
 
 # Upload and Security Configuration
 export MAX_UPLOAD_SIZE=104857600  # 100MB in bytes

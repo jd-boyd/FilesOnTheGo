@@ -28,9 +28,6 @@ go.work.sum
 # env file
 .env
 
-# PocketBase data directory
-pb_data/
-
 # Build artifacts
 filesonthego
 dist/
@@ -47,3 +44,8 @@ node_modules/
 # Playwright
 playwright-report/
 test-results/
+filesonthego_test
+
+# Test DBs.
+*.db
+

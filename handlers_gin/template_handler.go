@@ -9,7 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/pocketbase/pocketbase/core"
+	"github.com/gin-gonic/gin"
+	"github.com/jd-boyd/filesonthego/auth"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -99,104 +100,143 @@ func (r *TemplateRenderer) LoadTemplates() error {
 		"dashboard": {
 			"layouts/base.html",
 			"layouts/app.html",
+			"pages/dashboard.html",
+			"components/loading.html",
 			"components/header.html",
 			"components/breadcrumb.html",
-			"components/loading.html",
-			"pages/dashboard.html",
+		},
+		"files": {
+			"layouts/base.html",
+			"layouts/app.html",
+			"pages/files.html",
 		},
 		"settings": {
 			"layouts/base.html",
 			"layouts/app.html",
-			"components/header.html",
-			"components/breadcrumb.html",
-			"components/loading.html",
 			"pages/settings.html",
-		},
-		"admin": {
-			"layouts/base.html",
-			"layouts/app.html",
-			"components/header.html",
-			"components/breadcrumb.html",
-			"components/loading.html",
-			"pages/admin.html",
 		},
 		"profile": {
 			"layouts/base.html",
 			"layouts/app.html",
-			"components/header.html",
-			"components/breadcrumb.html",
-			"components/loading.html",
 			"pages/profile.html",
+		},
+		"admin": {
+			"layouts/base.html",
+			"layouts/app.html",
+			"pages/admin.html",
 		},
 	}
 
 	// Load each template set
 	for name, files := range templates {
-		var tmpl *template.Template
-		var err error
-
-		if r.fsys != nil {
-			// Load from fs.FS
-			tmpl = template.New(name).Funcs(getTemplateFuncs())
-			tmpl, err = tmpl.ParseFS(r.fsys, files...)
-		} else {
-			// Load from filesystem path (legacy mode)
-			fullPaths := make([]string, len(files))
-			for i, file := range files {
-				fullPaths[i] = filepath.Join(r.baseDir, "templates", file)
-			}
-			tmpl = template.New(name).Funcs(getTemplateFuncs())
-			tmpl, err = tmpl.ParseFiles(fullPaths...)
-		}
-
-		if err != nil {
+		if err := r.loadTemplate(name, files); err != nil {
 			return err
 		}
-
-		r.templates[name] = tmpl
 	}
 
 	return nil
 }
 
-// Render renders a template with the given data
-func (r *TemplateRenderer) Render(w io.Writer, name string, data interface{}) error {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+// loadTemplate loads a specific template by name
+func (r *TemplateRenderer) loadTemplate(name string, files []string) error {
+	var tmpl *template.Template
+	var err error
 
-	tmpl, exists := r.templates[name]
-	if !exists {
-		// Template not found, try to load it
-		r.mu.RUnlock()
-		if err := r.LoadTemplates(); err != nil {
-			r.mu.RLock()
-			return err
+	if r.fsys != nil {
+		// Load from fs.FS
+		tmpl, err = r.loadTemplateFromFS(files)
+	} else {
+		// Load from baseDir
+		tmpl, err = r.loadTemplateFromDir(files)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	r.templates[name] = tmpl
+	return nil
+}
+
+// loadTemplateFromFS loads templates from fs.FS
+func (r *TemplateRenderer) loadTemplateFromFS(files []string) (*template.Template, error) {
+	// Create new template with functions
+	tmpl := template.New("").Funcs(getTemplateFuncs())
+
+	// Parse each file from fs.FS
+	for _, file := range files {
+		content, err := fs.ReadFile(r.fsys, file)
+		if err != nil {
+			return nil, err
 		}
-		r.mu.RLock()
-		tmpl = r.templates[name]
-		if tmpl == nil {
-			return errors.New("template not found: " + name)
+
+		_, err = tmpl.New(file).Parse(string(content))
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	// Execute the base.html template which is the entry point
-	return tmpl.ExecuteTemplate(w, "base.html", data)
+	return tmpl, nil
 }
 
-// IsHTMXRequest checks if the request is from HTMX
-func IsHTMXRequest(c *core.RequestEvent) bool {
-	return c.Request.Header.Get("HX-Request") == "true"
+// loadTemplateFromDir loads templates from directory
+func (r *TemplateRenderer) loadTemplateFromDir(files []string) (*template.Template, error) {
+	// Create full paths
+	fullPaths := make([]string, len(files))
+	for i, file := range files {
+		fullPaths[i] = filepath.Join(r.baseDir, file)
+	}
+
+	// Parse templates
+	return template.New("").Funcs(getTemplateFuncs()).ParseFiles(fullPaths...)
+}
+
+// Render renders a template by name
+func (r *TemplateRenderer) Render(w io.Writer, name string, data interface{}) error {
+	r.mu.RLock()
+	tmpl, exists := r.templates[name]
+	r.mu.RUnlock()
+
+	if !exists {
+		return errors.New("template not found: " + name)
+	}
+
+	// Execute the template with the base layout
+	return tmpl.ExecuteTemplate(w, "layouts/base.html", data)
+}
+
+// Helper functions for handlers
+
+// IsHTMXRequest checks if the request is an HTMX request
+func IsHTMXRequest(c *gin.Context) bool {
+	return c.GetHeader("HX-Request") == "true"
 }
 
 // GetAuthUser extracts the authenticated user from the request context
-func GetAuthUser(c *core.RequestEvent) interface{} {
-	auth := c.Get("authRecord")
-	return auth
+func GetAuthUser(c *gin.Context) interface{} {
+	claims, err := auth.GetUserClaims(c)
+	if err != nil {
+		return nil
+	}
+	return claims
 }
 
 // PrepareTemplateData creates a TemplateData struct with common fields populated
-func PrepareTemplateData(c *core.RequestEvent) *TemplateData {
-	return &TemplateData{
-		User: GetAuthUser(c),
+func PrepareTemplateData(c *gin.Context) *TemplateData {
+	data := &TemplateData{
+		Settings: make(map[string]interface{}),
 	}
+
+	// Get authenticated user
+	user := GetAuthUser(c)
+	if user != nil {
+		data.User = user
+
+		// Get admin status from claims
+		if claims, ok := user.(*auth.JWTClaims); ok {
+			data.Settings["IsAdmin"] = claims.IsAdmin
+		}
+	}
+
+	return data
 }

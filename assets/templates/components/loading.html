@@ -1,4 +1,5 @@
 <!-- Loading Spinner Component -->
+{{define "loading.html"}}
 <div id="{{if .ID}}{{.ID}}{{else}}loading{{end}}"
      class="{{if .Overlay}}fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50{{else}}flex justify-center items-center p-4{{end}} htmx-indicator">
     <div class="flex flex-col items-center">
@@ -14,6 +15,7 @@
         {{end}}
     </div>
 </div>
+{{end}}
 
 <!-- Inline Loading (for buttons, etc.) -->
 {{define "loading-inline"}}

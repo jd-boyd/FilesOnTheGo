@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**FilesOnTheGo** is a self-hosted file storage and sharing service built with PocketBase (Go-based backend), S3-compatible storage, HTMX for frontend interactions, and Tailwind CSS for styling. This document provides guidelines for AI-assisted development to ensure consistency, quality, and maintainability.
+**FilesOnTheGo** is a self-hosted file storage and sharing service built with Gin (Go web framework), GORM (Go ORM), S3-compatible storage, HTMX for frontend interactions, and Tailwind CSS for styling. This document provides guidelines for AI-assisted development to ensure consistency, quality, and maintainability.
 
 ## Core Principles
 
@@ -15,9 +15,11 @@
 ## Technology Stack
 
 ### Backend
-- **PocketBase**: Go-based backend framework with built-in auth, database, and REST API
-- **Go**: Primary backend language (version 1.21+)
-- **SQLite**: Embedded database via PocketBase
+- **Gin**: Go web framework for HTTP routing and middleware
+- **GORM**: Go ORM for database operations with SQLite
+- **Go**: Primary backend language (version 1.24+)
+- **SQLite**: Embedded database with GORM driver
+- **JWT**: Token-based authentication with session management
 - **AWS SDK for Go**: S3 integration
 
 ### Frontend
@@ -39,32 +41,44 @@
 ```
 FilesOnTheGo/
 ├── main.go                    # Application entry point
-├── migrations/                # Database migrations
-├── pb_hooks/                  # PocketBase hooks and extensions
-│   ├── files.go              # File operations hooks
-│   ├── shares.go             # Share link logic
-│   └── permissions.go        # Permission validation
-├── handlers/                  # HTTP request handlers
-│   ├── file_upload.go
-│   ├── file_download.go
+├── database/                  # Database setup and migrations
+│   └── database.go           # GORM database initialization
+├── models/                    # GORM data models
+│   ├── user.go               # User model
+│   ├── file.go               # File model
+│   ├── directory.go          # Directory model
+│   ├── share.go              # Share model
+│   └── share_access_log.go   # Share access logging
+├── handlers_gin/              # Gin HTTP request handlers
+│   ├── auth_handler.go       # Authentication routes
+│   ├── file_upload_handler.go
+│   ├── file_download_handler.go
 │   ├── share_handler.go
-│   └── directory_handler.go
+│   ├── directory_handler.go
+│   ├── settings_handler.go
+│   ├── admin_handler.go
+│   └── template_handler.go   # Template rendering
 ├── services/                  # Business logic layer
 │   ├── s3_service.go         # S3 operations
+│   ├── user_service.go       # User management
 │   ├── share_service.go      # Share link management
-│   └── permission_service.go # Permission validation
-├── models/                    # Data models and types
-├── middleware/                # Custom middleware
-├── templates/                 # HTMX HTML templates
-│   ├── layouts/
-│   ├── components/
-│   └── pages/
-├── static/                    # Static assets (CSS, JS, icons)
+│   ├── permission_service.go # Permission validation
+│   └── metrics_service.go    # Metrics collection
+├── auth/                      # Authentication system
+│   ├── jwt.go                # JWT token management
+│   └── session.go            # Session management
+├── config/                    # Configuration management
+│   └── config.go             # Environment variable handling
+├── assets/                    # Embedded assets
+│   ├── templates/            # HTMX HTML templates
+│   │   ├── layouts/
+│   │   ├── components/
+│   │   └── pages/
+│   └── static/               # CSS, JS, icons
 ├── tests/                     # Test files organized by package
 │   ├── integration/
 │   ├── unit/
 │   └── fixtures/
-├── pb_data/                   # PocketBase data directory (gitignored)
 ├── go.mod
 ├── go.sum
 ├── DESIGN.md
@@ -144,7 +158,7 @@ func TestValidateFileAccess_SharedReadOnlyDeniesUpload(t *testing.T) {
 #### 2. Integration Tests
 **Required for:**
 - API endpoint handlers
-- Database operations with PocketBase
+- Database operations with GORM
 - S3 upload/download workflows
 - Authentication flows
 - Share link creation and access
@@ -152,6 +166,7 @@ func TestValidateFileAccess_SharedReadOnlyDeniesUpload(t *testing.T) {
 **Example locations:**
 - `tests/integration/file_upload_test.go`
 - `tests/integration/share_access_test.go`
+- `tests/integration/auth_test.go`
 
 **Example test structure:**
 ```go
@@ -369,7 +384,7 @@ Before submitting code:
 
 1. **Always validate authentication** on non-public endpoints
 2. **Check permissions** before any file operation
-3. **Use PocketBase's built-in auth** - don't roll your own
+3. **Use JWT tokens and session management** - don't roll your own auth
 4. **Implement rate limiting** on sensitive endpoints
 
 ### Input Validation
@@ -413,16 +428,15 @@ func TestSanitizeFilename_RemovesPathSeparators(t *testing.T) {
 
 ```go
 // Always follow this pattern for file operations
-func (h *FileHandler) DownloadFile(c echo.Context) error {
+func (h *FileDownloadHandler) HandleDownload(c *gin.Context) error {
     fileID := c.Param("id")
-    userID := c.Get("user_id").(string)
-    shareToken := c.QueryParam("share_token")
+    userID := c.GetString("user_id") // Gin context getter
+    shareToken := c.Query("share_token")
 
     // Validate access
     if !h.permissionService.ValidateFileAccess(fileID, userID, shareToken, "download") {
-        return c.JSON(http.StatusForbidden, map[string]string{
-            "error": "Access denied",
-        })
+        c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+        return nil
     }
 
     // Proceed with download
@@ -466,22 +480,22 @@ func (h *FileHandler) DownloadFile(c echo.Context) error {
 ### Example HTMX Endpoint
 
 ```go
-func (h *FileHandler) ListFiles(c echo.Context) error {
-    directoryID := c.QueryParam("directory_id")
-    isHTMX := c.Request().Header.Get("HX-Request") == "true"
+func (h *DirectoryHandler) ListDirectory(c *gin.Context) error {
+    directoryID := c.Query("directory_id")
+    isHTMX := c.GetHeader("HX-Request") == "true"
 
-    files, err := h.fileService.ListFiles(directoryID)
+    files, err := h.directoryService.GetFiles(directoryID)
     if err != nil {
         return err
     }
 
     if isHTMX {
         // Return HTML fragment for HTMX request
-        return c.Render(http.StatusOK, "components/file-list.html", files)
+        return h.templateRenderer.HTML(c, http.StatusOK, "components/file-list.html", files)
     }
 
     // Return full page for direct navigation
-    return c.Render(http.StatusOK, "pages/files.html", map[string]interface{}{
+    return h.templateRenderer.HTML(c, http.StatusOK, "pages/files.html", gin.H{
         "files": files,
     })
 }
@@ -519,7 +533,7 @@ type AppError struct {
 }
 
 // Use consistent error responses
-func (h *FileHandler) HandleError(c echo.Context, err error, statusCode int) error {
+func (h *BaseHandler) HandleError(c *gin.Context, err error, statusCode int) error {
     appErr := &AppError{
         Code:    "ERROR_CODE",
         Message: "User-friendly message",
@@ -527,9 +541,10 @@ func (h *FileHandler) HandleError(c echo.Context, err error, statusCode int) err
     }
 
     // Log the error
-    log.Error().Err(err).Msg("Operation failed")
+    h.logger.Error().Err(err).Msg("Operation failed")
 
-    return c.JSON(statusCode, appErr)
+    c.JSON(statusCode, appErr)
+    return nil
 }
 ```
 
@@ -741,7 +756,10 @@ Document all endpoints with:
 
 ```bash
 # Run application in development mode
-go run main.go serve
+go run main.go
+
+# Run with external assets (for development)
+go run main.go -external-assets -assets-dir .
 
 # Run all tests with detailed summary (recommended)
 make test
@@ -757,6 +775,11 @@ make race
 
 # Run specific test (use go test directly)
 go test -v -run TestValidateFileAccess ./services/...
+
+# Run specific package tests
+go test -v ./services/...
+go test -v ./models/...
+go test -v ./handlers_gin/...
 
 # Run benchmarks
 make benchmark
@@ -799,6 +822,6 @@ When starting a new feature, consider:
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-11-21
+**Document Version:** 2.0
+**Last Updated:** 2025-12-01
 **Author:** Joshua D. Boyd

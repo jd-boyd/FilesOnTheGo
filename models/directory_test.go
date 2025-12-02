@@ -295,7 +295,7 @@ func TestDirectory_TableName(t *testing.T) {
 	assert.Equal(t, "directories", dir.TableName())
 }
 
-// Note: GetBreadcrumbs tests would require a real PocketBase instance
+// Note: GetBreadcrumbs tests would require a real database instance
 // or mocking, so we'll skip comprehensive testing here and rely on
 // integration tests for that functionality.
 func TestBreadcrumb_Structure(t *testing.T) {

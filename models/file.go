@@ -4,27 +4,39 @@ import (
 	"errors"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/pocketbase/pocketbase/core"
+	"gorm.io/gorm"
 )
 
 // File represents a file record in the database
 type File struct {
-	core.BaseModel
-	Name            string `db:"name" json:"name"`
-	Path            string `db:"path" json:"path"`
-	User            string `db:"user" json:"user"`                         // Relation ID
-	ParentDirectory string `db:"parent_directory" json:"parent_directory"` // Relation ID (optional)
-	Size            int64  `db:"size" json:"size"`
-	MimeType        string `db:"mime_type" json:"mime_type"`
-	S3Key           string `db:"s3_key" json:"s3_key"`
-	S3Bucket        string `db:"s3_bucket" json:"s3_bucket"`
-	Checksum        string `db:"checksum" json:"checksum"`
+	ID        string    `gorm:"primaryKey;size:15" json:"id"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"created"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updated"`
+
+	Name            string `gorm:"size:255;not null;index" json:"name"`
+	Path            string `gorm:"size:1024;not null;index" json:"path"`
+	User            string `gorm:"size:15;not null;index" json:"user"` // Foreign key to users
+	ParentDirectory string `gorm:"size:15;index" json:"parent_directory"` // Foreign key to directories (optional)
+	Size            int64  `gorm:"not null;default:0" json:"size"`
+	MimeType        string `gorm:"size:255" json:"mime_type"`
+	S3Key           string `gorm:"size:512;not null" json:"s3_key"`
+	S3Bucket        string `gorm:"size:255;not null" json:"s3_bucket"`
+	Checksum        string `gorm:"size:64" json:"checksum"` // SHA256 checksum
 }
 
 // TableName returns the table name for the File model
 func (f *File) TableName() string {
 	return "files"
+}
+
+// BeforeCreate hook to generate ID if not set
+func (f *File) BeforeCreate(tx *gorm.DB) error {
+	if f.ID == "" {
+		f.ID = GenerateID()
+	}
+	return nil
 }
 
 // IsOwnedBy checks if the file is owned by the specified user

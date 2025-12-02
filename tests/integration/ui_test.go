@@ -1,3 +1,5 @@
+//go:build integration
+
 package integration
 
 import (
@@ -6,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/jd-boyd/filesonthego/assets"
-	"github.com/jd-boyd/filesonthego/handlers"
+	handlers "github.com/jd-boyd/filesonthego/handlers_gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

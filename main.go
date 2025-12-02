@@ -1,10 +1,10 @@
 // Package main implements the FilesOnTheGo application entry point.
-// FilesOnTheGo is a self-hosted file storage and sharing service built with PocketBase.
+// FilesOnTheGo is a self-hosted file storage and sharing service built with Gin and GORM.
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,16 +12,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jd-boyd/filesonthego/assets"
+	"github.com/jd-boyd/filesonthego/auth"
 	"github.com/jd-boyd/filesonthego/config"
-	"github.com/jd-boyd/filesonthego/handlers"
-	"github.com/jd-boyd/filesonthego/middleware"
-	_ "github.com/jd-boyd/filesonthego/migrations" // Import migrations for side effects
+	"github.com/jd-boyd/filesonthego/database"
+	handlers "github.com/jd-boyd/filesonthego/handlers_gin"
 	"github.com/jd-boyd/filesonthego/services"
-	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/apis"
-	"github.com/pocketbase/pocketbase/core"
 	"github.com/rs/zerolog"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 func main() {
@@ -53,11 +52,6 @@ func main() {
 		logger.Info().Msg("Using embedded assets")
 	}
 
-	// Create PocketBase instance with data directory
-	app := pocketbase.NewWithConfig(pocketbase.Config{
-		DefaultDataDir: cfg.DBPath,
-	})
-
 	// Log configuration (without sensitive data)
 	logger.Info().
 		Str("environment", cfg.AppEnvironment).
@@ -69,6 +63,49 @@ func main() {
 		Bool("tls_enabled", cfg.TLSEnabled).
 		Bool("letsencrypt_enabled", cfg.LetsEncryptEnabled).
 		Msg("Configuration loaded")
+
+	// Initialize database
+	dbConfig := database.Config{
+		DSN:             cfg.DBPath + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)",
+		MaxIdleConns:    10,
+		MaxOpenConns:    100,
+		ConnMaxLifetime: time.Hour,
+		LogLevel:        gormlogger.Silent,
+	}
+	if cfg.IsDevelopment() {
+		dbConfig.LogLevel = gormlogger.Info
+	}
+
+	if err := database.Initialize(dbConfig); err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize database")
+	}
+	defer database.Close()
+
+	// Run database migrations
+	if err := database.AutoMigrate(); err != nil {
+		logger.Fatal().Err(err).Msg("Failed to run database migrations")
+	}
+	logger.Info().Msg("Database initialized successfully")
+
+	// Initialize JWT manager
+	jwtConfig := auth.JWTConfig{
+		SecretKey:        []byte(getEnvOrDefault("JWT_SECRET", "change-this-in-production-"+cfg.AppEnvironment)),
+		AccessExpiration: 24 * time.Hour, // 24 hours
+		Issuer:           "filesonthego",
+	}
+	jwtManager := auth.NewJWTManager(jwtConfig)
+
+	// Initialize session manager
+	sessionConfig := auth.SessionConfig{
+		CookieName:     "filesonthego_session",
+		CookieDomain:   "",
+		CookiePath:     "/",
+		CookieSecure:   cfg.TLSEnabled, // Only send over HTTPS in production
+		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteLaxMode,
+		MaxAge:         24 * time.Hour,
+	}
+	sessionManager := auth.NewSessionManager(jwtManager, sessionConfig)
 
 	// Initialize template renderer using assets filesystem
 	templatesFS, err := assets.TemplatesFS()
@@ -87,176 +124,201 @@ func main() {
 		logger.Fatal().Err(err).Msg("Failed to get static filesystem")
 	}
 
-	// Initialize metrics service
+	// Initialize services
+	db := database.GetDB()
 	metricsService := services.NewMetricsService()
+	userService := services.NewUserService(db, logger)
+	s3Service, err := services.NewS3Service(cfg)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize S3 service")
+	}
+	permissionService := services.NewPermissionService(db, logger)
+	shareService := services.NewShareService(db, logger)
 
-	// Set up health check endpoint and routes
-	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		e := se
+	// Initialize handlers
+	authHandler := handlers.NewAuthHandler(db, templateRenderer, logger, cfg, jwtManager, sessionManager)
+	settingsHandler := handlers.NewSettingsHandler(userService, templateRenderer, logger)
+	adminHandler := handlers.NewAdminHandler(userService, templateRenderer, logger)
+	fileUploadHandler := handlers.NewFileUploadHandler(db, s3Service, permissionService, userService, logger, cfg)
+	fileDownloadHandler := handlers.NewFileDownloadHandler(db, s3Service, permissionService, logger)
+	directoryHandler := handlers.NewDirectoryHandler(db, permissionService, logger, templateRenderer)
+	shareHandler := handlers.NewShareHandler(db, shareService, permissionService, logger, templateRenderer)
 
-		// Register metrics middleware to track all HTTP requests
-		e.Router.BindFunc(middleware.MetricsMiddleware(metricsService))
+	// Ensure admin user exists with proper permissions
+	ensureAdminUser(userService, logger)
 
-		// Metrics endpoint for Prometheus scraping
-		e.Router.GET("/metrics", func(c *core.RequestEvent) error {
-			c.Response.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-			return c.String(200, metricsService.GetMetrics())
-		})
+	// Set Gin mode based on environment
+	if cfg.IsProduction() {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 
-		// Custom health check endpoint with app info (PocketBase already has /api/health)
-		e.Router.GET("/api/status", func(c *core.RequestEvent) error {
-			return c.JSON(200, map[string]interface{}{
-				"status":      "ok",
-				"environment": cfg.AppEnvironment,
-				"version":     "0.1.0",
-			})
-		})
+	// Create Gin router
+	router := gin.New()
 
-		// Serve static files from assets filesystem
-		staticHandler := http.FileServer(http.FS(staticFS))
-		e.Router.GET("/static/{path...}", func(c *core.RequestEvent) error {
-			// Strip the /static prefix and serve from staticFS
-			http.StripPrefix("/static", staticHandler).ServeHTTP(c.Response, c.Request)
-			return nil
-		})
+	// Global middleware
+	router.Use(gin.Recovery())
+	router.Use(ginLogger(logger))
+	router.Use(metricsMiddleware(metricsService))
 
-		// Initialize auth handler
-		authHandler := handlers.NewAuthHandler(app, templateRenderer, logger, cfg)
-
-		// Initialize settings handler
-		settingsHandler := handlers.NewSettingsHandler(app, templateRenderer, logger, cfg)
-
-		// Initialize admin handler
-		adminHandler := handlers.NewAdminHandler(app, templateRenderer, logger, cfg)
-
-		// Authentication routes
-		e.Router.GET("/login", authHandler.ShowLoginPage)
-		e.Router.GET("/register", authHandler.ShowRegisterPage)
-		e.Router.POST("/api/auth/login", authHandler.HandleLogin)
-		e.Router.POST("/api/auth/register", authHandler.HandleRegister)
-		e.Router.POST("/logout", authHandler.HandleLogout)
-
-		// Dashboard route - require authentication
-		e.Router.GET("/dashboard", middleware.RequireAuth(app)(authHandler.ShowDashboard))
-
-		// Settings routes (personal user settings) - require authentication
-		e.Router.GET("/settings", middleware.RequireAuth(app)(settingsHandler.ShowSettingsPage))
-
-		// Profile routes (user profile management) - require authentication
-		e.Router.GET("/profile", middleware.RequireAuth(app)(settingsHandler.ShowProfilePage))
-		e.Router.POST("/profile", middleware.RequireAuth(app)(settingsHandler.HandleUpdateProfile))
-
-		// Admin routes (user management & system settings) - require authentication
-		e.Router.GET("/admin", middleware.RequireAuth(app)(adminHandler.ShowAdminPage))
-		e.Router.POST("/api/admin/settings/update", middleware.RequireAuth(app)(adminHandler.HandleUpdateSystemSettings))
-		e.Router.POST("/api/admin/users/create", middleware.RequireAuth(app)(adminHandler.HandleCreateUser))
-		e.Router.DELETE("/api/admin/users/{id}", middleware.RequireAuth(app)(adminHandler.HandleDeleteUser))
-
-		// Root redirect to dashboard or login
-		e.Router.GET("/", func(c *core.RequestEvent) error {
-			// Check if user is authenticated using the same logic as RequireAuth middleware
-
-			// First check if PocketBase has authenticated the user
-			if c.Auth != nil {
-				return c.Redirect(302, "/dashboard")
-			}
-
-			// Check our custom context
-			if c.Get("authRecord") != nil {
-				return c.Redirect(302, "/dashboard")
-			}
-
-			// Check for pb_auth cookie (our simplified validation)
-			cookie, err := c.Request.Cookie("pb_auth")
-			if err == nil && cookie.Value != "" {
-				// User has valid authentication cookie, redirect to dashboard
-				return c.Redirect(302, "/dashboard")
-			}
-
-			// Not authenticated, redirect to login
-			return c.Redirect(302, "/login")
-		})
-
-		logger.Info().Msg("Routes configured successfully")
-		return e.Next()
+	// Metrics endpoint for Prometheus scraping
+	router.GET("/metrics", func(c *gin.Context) {
+		c.Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		c.String(http.StatusOK, metricsService.GetMetrics())
 	})
 
-	// Set up graceful shutdown
-	// Handle OS signals for graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	// Health check endpoint
+	router.GET("/api/status", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":      "ok",
+			"environment": cfg.AppEnvironment,
+			"version":     "0.2.0",
+		})
+	})
 
-	// Bootstrap PocketBase (required before apis.Serve in v0.33+)
-	if err := app.Bootstrap(); err != nil {
-		logger.Fatal().Err(err).Msg("Failed to bootstrap PocketBase")
+	// Serve static files from assets filesystem
+	router.StaticFS("/static", http.FS(staticFS))
+
+	// Authentication routes (public)
+	router.GET("/login", authHandler.ShowLoginPage)
+	router.GET("/register", authHandler.ShowRegisterPage)
+	router.POST("/api/auth/login", authHandler.HandleLogin)
+	router.POST("/api/auth/register", authHandler.HandleRegister)
+	router.POST("/logout", authHandler.HandleLogout)
+
+	// Protected routes (require authentication)
+	protected := router.Group("/")
+	protected.Use(sessionManager.RequireAuth())
+	{
+		// Dashboard
+		protected.GET("/dashboard", authHandler.ShowDashboard)
+
+		// Settings routes (personal user settings)
+		protected.GET("/settings", settingsHandler.ShowSettingsPage)
+
+		// Profile routes (user profile management)
+		protected.GET("/profile", settingsHandler.ShowProfilePage)
+		protected.GET("/api/profile", settingsHandler.GetProfile)
+		protected.GET("/api/profile/stats", settingsHandler.GetProfileStats)
+		protected.POST("/api/profile/update", settingsHandler.UpdateProfile)
+		protected.POST("/api/profile/password", settingsHandler.UpdatePassword)
+
+		// File routes
+		protected.POST("/api/files/upload", fileUploadHandler.HandleUpload)
+		protected.GET("/api/files/:id/download", fileDownloadHandler.HandleDownload)
+		protected.DELETE("/api/files/:id", fileDownloadHandler.HandleDelete)
+
+		// Directory routes
+		protected.GET("/api/directories", directoryHandler.ListDirectory)
+		protected.POST("/api/directories", directoryHandler.CreateDirectory)
+		protected.DELETE("/api/directories/:id", directoryHandler.DeleteDirectory)
+
+		// Share routes
+		protected.POST("/api/shares", shareHandler.CreateShare)
+		protected.GET("/api/shares", shareHandler.ListShares)
+		protected.GET("/api/shares/:id", shareHandler.GetShare)
+		protected.DELETE("/api/shares/:id", shareHandler.RevokeShare)
 	}
-	logger.Info().Msg("PocketBase bootstrapped successfully")
 
-	// Ensure admin user has proper permissions
-	ensureAdminUser(app, logger)
+	// Public share access (no auth required)
+	router.GET("/share", shareHandler.AccessShare)
+	router.POST("/share", shareHandler.AccessShare)
 
-	// Start PocketBase server in a goroutine
-	errChan := make(chan error, 1)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				errChan <- fmt.Errorf("panic: %v", r)
-			}
-		}()
+	// Admin routes (require admin privileges)
+	admin := router.Group("/admin")
+	admin.Use(sessionManager.RequireAdmin())
+	{
+		// Admin dashboard
+		admin.GET("", adminHandler.ShowAdminDashboard)
 
-		// Configure server addresses based on TLS settings
-		var httpAddr, httpsAddr string
-		var certificateDomains []string
+		// User management
+		admin.GET("/api/users", adminHandler.ListUsers)
+		admin.GET("/api/users/:id", adminHandler.GetUser)
+		admin.GET("/api/users/:id/stats", adminHandler.GetUserStats)
+		admin.POST("/api/users", adminHandler.CreateUser)
+		admin.PUT("/api/users/:id", adminHandler.UpdateUser)
+		admin.POST("/api/users/:id/password", adminHandler.ResetUserPassword)
+		admin.DELETE("/api/users/:id", adminHandler.DeleteUser)
+		admin.GET("/api/users/search", adminHandler.SearchUsers)
+	}
 
-		if cfg.TLSEnabled {
-			httpsAddr = ":" + cfg.TLSPort
-			if cfg.TLSRedirect {
-				// If TLS redirect is enabled, we'll run HTTP on the standard port for redirects
-				httpAddr = ":" + cfg.AppPort
-			}
-			// Add custom domain for Let's Encrypt if configured
-			if cfg.LetsEncryptEnabled && cfg.LetsEncryptDomain != "" {
-				certificateDomains = append(certificateDomains, cfg.LetsEncryptDomain)
-			}
-		} else {
-			httpAddr = ":" + cfg.AppPort
+	// Root redirect to dashboard or login
+	router.GET("/", func(c *gin.Context) {
+		// Check if user is authenticated
+		if sessionManager.IsAuthenticated(c) {
+			c.Redirect(http.StatusFound, "/dashboard")
+			return
 		}
 
-		// Use PocketBase's built-in serve function which handles TLS properly
-		if err := apis.Serve(app, apis.ServeConfig{
-			ShowStartBanner:    false, // We have our own logging
-			HttpAddr:           httpAddr,
-			HttpsAddr:          httpsAddr,
-			CertificateDomains: certificateDomains,
-		}); err != nil {
-			errChan <- fmt.Errorf("failed to start server: %w", err)
+		// Not authenticated, redirect to login
+		c.Redirect(http.StatusMovedPermanently, "/login")
+	})
+
+	logger.Info().Msg("Routes configured successfully")
+
+	// Configure HTTP server
+	httpAddr := ":" + cfg.AppPort
+	srv := &http.Server{
+		Addr:           httpAddr,
+		Handler:        router,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   15 * time.Second,
+		IdleTimeout:    60 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1 MB
+	}
+
+	// Start server in a goroutine
+	go func() {
+		logger.Info().
+			Str("address", httpAddr).
+			Bool("tls_enabled", cfg.TLSEnabled).
+			Msg("Starting HTTP server")
+
+		var err error
+		if cfg.TLSEnabled && cfg.TLSCertFile != "" && cfg.TLSKeyFile != "" {
+			// Start with TLS
+			err = srv.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
+		} else {
+			// Start without TLS
+			err = srv.ListenAndServe()
+		}
+
+		if err != nil && err != http.ErrServerClosed {
+			logger.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
-	// Wait for shutdown signal or error
-	select {
-	case sig := <-sigChan:
-		logger.Info().
-			Str("signal", sig.String()).
-			Msg("Received shutdown signal, initiating graceful shutdown")
+	logger.Info().
+		Str("address", httpAddr).
+		Str("environment", cfg.AppEnvironment).
+		Msg("FilesOnTheGo server started successfully")
 
-		// Give some time for graceful shutdown
-		shutdownTimer := time.NewTimer(30 * time.Second)
-		defer shutdownTimer.Stop()
+	// Set up graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 
-		select {
-		case <-time.After(30 * time.Second):
-			logger.Warn().Msg("Shutdown timeout exceeded")
-		case <-errChan:
-			logger.Info().Msg("Server shutdown completed")
-		}
+	// Wait for shutdown signal
+	sig := <-quit
+	logger.Info().
+		Str("signal", sig.String()).
+		Msg("Received shutdown signal, initiating graceful shutdown")
 
-	case err := <-errChan:
-		logger.Error().
-			Err(err).
-			Msg("Application error occurred")
-		os.Exit(1)
+	// Create shutdown context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Shutdown server
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error().Err(err).Msg("Server forced to shutdown")
 	}
+
+	// Close database connection
+	if err := database.Close(); err != nil {
+		logger.Error().Err(err).Msg("Failed to close database connection")
+	}
+
+	logger.Info().Msg("Server shutdown completed successfully")
 }
 
 // initLogger initializes and configures the zerolog logger
@@ -287,30 +349,98 @@ func initLogger(cfg *config.Config) zerolog.Logger {
 	return logger
 }
 
+// ginLogger creates a Gin middleware for zerolog
+func ginLogger(logger zerolog.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+
+		// Process request
+		c.Next()
+
+		// Log request
+		latency := time.Since(start)
+		statusCode := c.Writer.Status()
+
+		logEvent := logger.Info()
+		if statusCode >= 500 {
+			logEvent = logger.Error()
+		} else if statusCode >= 400 {
+			logEvent = logger.Warn()
+		}
+
+		logEvent.
+			Str("method", c.Request.Method).
+			Str("path", path).
+			Str("query", query).
+			Int("status", statusCode).
+			Dur("latency", latency).
+			Str("ip", c.ClientIP()).
+			Str("user_agent", c.Request.UserAgent()).
+			Msg("HTTP request")
+	}
+}
+
+// metricsMiddleware wraps the metrics service for Gin
+func metricsMiddleware(metricsService *services.MetricsService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		// Process request
+		c.Next()
+
+		// Record metrics
+		duration := time.Since(start)
+		metricsService.RecordHTTPRequest(
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Writer.Status(),
+			duration,
+		)
+	}
+}
+
 // ensureAdminUser ensures the admin user exists with proper is_admin flag
-func ensureAdminUser(app *pocketbase.PocketBase, logger zerolog.Logger) {
+func ensureAdminUser(userService *services.UserService, logger zerolog.Logger) {
 	adminEmail := os.Getenv("ADMIN_EMAIL")
 	if adminEmail == "" {
 		logger.Debug().Msg("No ADMIN_EMAIL environment variable set, skipping admin user setup")
 		return
 	}
 
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	if adminPassword == "" {
+		adminPassword = "admin123" // Default password - should be changed
+		logger.Warn().Msg("No ADMIN_PASSWORD set, using default password 'admin123'")
+	}
+
 	logger.Info().
 		Str("admin_email", adminEmail).
 		Msg("Ensuring admin user exists with proper permissions")
 
-	// Try to find user by email in superusers collection (PocketBase auth users)
-	record, err := app.FindFirstRecordByData("superusers", "email", adminEmail)
+	// Try to find user by email
+	user, err := userService.GetUserByEmail(adminEmail)
 	if err != nil {
-		logger.Warn().
+		// User doesn't exist, create them
+		user, err = userService.CreateUser(adminEmail, "admin", adminPassword, true)
+		if err != nil {
+			logger.Error().
+				Str("admin_email", adminEmail).
+				Err(err).
+				Msg("Failed to create admin user")
+			return
+		}
+
+		logger.Info().
 			Str("admin_email", adminEmail).
-			Err(err).
-			Msg("Admin user not found, will be created when API is called")
+			Str("user_id", user.ID).
+			Msg("Admin user created successfully")
 		return
 	}
 
 	// Check if user already has admin flag
-	if record.GetBool("is_admin") {
+	if user.IsAdmin {
 		logger.Info().
 			Str("admin_email", adminEmail).
 			Msg("Admin user already has is_admin flag set")
@@ -318,8 +448,11 @@ func ensureAdminUser(app *pocketbase.PocketBase, logger zerolog.Logger) {
 	}
 
 	// Set the admin flag
-	record.Set("is_admin", true)
-	if err := app.Save(record); err != nil {
+	updates := map[string]interface{}{
+		"is_admin": true,
+	}
+	_, err = userService.UpdateUser(user.ID, updates)
+	if err != nil {
 		logger.Error().
 			Str("admin_email", adminEmail).
 			Err(err).
@@ -330,4 +463,12 @@ func ensureAdminUser(app *pocketbase.PocketBase, logger zerolog.Logger) {
 	logger.Info().
 		Str("admin_email", adminEmail).
 		Msg("Successfully set is_admin flag on existing admin user")
+}
+
+// getEnvOrDefault gets an environment variable or returns a default value
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }

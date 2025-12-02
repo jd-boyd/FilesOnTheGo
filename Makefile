@@ -29,6 +29,7 @@ help:
 	@echo "  test        Run all tests with detailed summary (recommended)"
 	@echo "  test-unit   Run unit tests only with detailed summary"
 	@echo "  test-integration Run integration tests only with detailed summary"
+	@echo "  test-security Run security tests only with detailed summary"
 	@echo "  test-container Run container integration tests with full setup"
 	@echo "  test-container-only Run container tests without setup"
 	@echo "  test-verbose Run tests with traditional verbose output (for debugging)"
@@ -128,7 +129,7 @@ test:
 .PHONY: test-unit
 test-unit:
 	@echo "Running unit tests with detailed summary..."
-	@go test -json -short ./... 2>&1 | go run tools/test-summary/main.go
+	@go test -json -short -tags=unit . ./auth/... ./config/... ./database/... ./handlers_gin/... ./models/... ./services/... ./tests/unit/... 2>&1 | go run tools/test-summary/main.go
 
 .PHONY: test-integration
 test-integration:
@@ -137,6 +138,15 @@ test-integration:
 		go test -json -tags=integration ./tests/integration/... 2>&1 | go run tools/test-summary/main.go; \
 	else \
 		echo "No integration tests found in tests/integration/"; \
+	fi
+
+.PHONY: test-security
+test-security:
+	@echo "Running security tests with detailed summary..."
+	@if [ -d "tests/security" ]; then \
+		go test -json -tags=security ./tests/security/... 2>&1 | go run tools/test-summary/main.go; \
+	else \
+		echo "No security tests found in tests/security/"; \
 	fi
 
 .PHONY: test-container
@@ -228,7 +238,7 @@ docker-run:
 	@echo "Running Docker container..."
 	docker run -p 8090:8090 -v $(PWD)/pb_data:/pb_data filesonthego:latest
 
-# Database operations (using PocketBase)
+# Database operations
 .PHONY: db-migrate
 db-migrate: build
 	@echo "Running database migrations..."

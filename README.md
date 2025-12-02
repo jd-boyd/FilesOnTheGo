@@ -1,10 +1,10 @@
 # FilesOnTheGo
 
-Self-hosted file storage with S3 backend, built on PocketBase.
+Self-hosted file storage with S3 backend, built with Go and Gin.
 
 ## What is this?
 
-FilesOnTheGo is a file sharing service you run yourself. Think Nextcloud or Google Drive, but simpler. Files get stored in S3-compatible storage (MinIO, AWS, Backblaze, etc.) while PocketBase handles users, auth, and metadata.
+FilesOnTheGo is a file sharing service you run yourself. Think Nextcloud or Google Drive, but simpler. Files get stored in S3-compatible storage (MinIO, AWS, Backblaze, etc.) while the built-in Go application handles users, auth, and metadata using GORM and SQLite.
 
 The frontend uses HTMX and Tailwind—minimal JavaScript, server-rendered pages.
 

@@ -55,7 +55,7 @@ func SetupContainerTest(t *testing.T) *ContainerTestConfig {
 }
 
 // LoginResponse represents the response from a login request
-// PocketBase returns "record" not "user" for auth responses
+// Application returns "record" not "user" for auth responses
 type LoginResponse struct {
 	Token  string `json:"token"`
 	Record struct {
@@ -66,7 +66,7 @@ type LoginResponse struct {
 }
 
 // ErrorResponse represents an error response from the API
-// PocketBase uses "message" not "error" for error responses
+// Application uses "message" not "error" for error responses
 type ErrorResponse struct {
 	Message string `json:"message"`
 	Status  int    `json:"status"`
@@ -87,7 +87,7 @@ func TestContainer_LoginFlow(t *testing.T) {
 
 	config := SetupContainerTest(t)
 
-	// Test our custom status endpoint (PocketBase has its own /api/health)
+	// Test our custom status endpoint (application uses /api/status)
 	t.Run("Health_Check", func(t *testing.T) {
 		resp, err := config.HTTPClient.Get(config.BaseURL + "/api/status")
 		require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestContainer_LoginFlow(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		// PocketBase may allow public read access to files collection depending on config
+		// Application may allow public read access to files collection depending on config
 		// Valid responses: 401 (Unauthorized), 403 (Forbidden), 404 (collection doesn't exist), or 200 (public access allowed)
 		assert.True(t, resp.StatusCode == http.StatusUnauthorized ||
 			resp.StatusCode == http.StatusForbidden ||
@@ -222,7 +222,7 @@ func TestContainer_UserRegistration(t *testing.T) {
 		defer resp.Body.Close()
 
 		// Registration should succeed if public registration is enabled
-		// PocketBase returns 200 OK (not 201 Created) for successful registration
+		// Application returns 200 OK (not 201 Created) for successful registration
 		// or return 403 if registration is disabled
 		assert.True(t, resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusForbidden,
 			"Expected 200 or 403, got %d", resp.StatusCode)

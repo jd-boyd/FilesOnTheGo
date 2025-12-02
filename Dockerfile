@@ -42,7 +42,7 @@ COPY --from=builder /app/filesonthego .
 # No need to copy them separately. If you need external assets for development,
 # use the -external-assets flag and mount the assets directory.
 
-# Create data directory for PocketBase
+# Create data directory for
 RUN mkdir -p /app/data && \
     chown -R appuser:appgroup /app
 
