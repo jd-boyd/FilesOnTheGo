@@ -13,7 +13,7 @@
 {{define "page-actions"}}
 <button type="button"
         class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-        onclick="createFolder()">
+        onclick="openNewFolderModal()">
     <svg class="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
     </svg>
@@ -49,6 +49,9 @@
     </div>
 
     {{if .HasFiles}}
+    <!-- Include File Actions Component for modals -->
+    {{template "file-actions.html" .}}
+
     <!-- Files List -->
     <div id="files-list">
         <!-- This will be populated by HTMX -->
@@ -79,6 +82,9 @@
             </button>
         </div>
     </div>
+
+    <!-- Include File Actions Component for modals (even in empty state) -->
+    {{template "file-actions.html" .}}
     {{end}}
 
     <!-- Recent Activity (Optional) -->

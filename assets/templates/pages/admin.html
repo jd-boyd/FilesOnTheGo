@@ -89,7 +89,7 @@
                                     {{.StorageUsed}}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{.Created}}
+                                    {{.CreatedAt}}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     {{if .IsAdmin}}
@@ -105,7 +105,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button class="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
                                     <button class="text-red-600 hover:text-red-900"
-                                            hx-delete="/api/admin/users/{{.ID}}"
+                                            hx-delete="/admin/api/users/{{.ID}}"
                                             hx-confirm="Are you sure you want to delete this user?"
                                             hx-target="#users-table"
                                             hx-swap="outerHTML">
@@ -135,7 +135,7 @@
                     <!-- Success/Error Messages -->
                     <div id="settings-message" class="mb-4"></div>
 
-                    <form hx-post="/api/admin/settings/update"
+                    <form hx-post="/admin/api/settings/update"
                           hx-target="#settings-message"
                           hx-swap="innerHTML"
                           hx-indicator="#settings-loading"
@@ -298,7 +298,7 @@
             <!-- Success/Error Messages -->
             <div id="add-user-message" class="mb-4"></div>
 
-            <form hx-post="/api/admin/users/create"
+            <form hx-post="/admin/api/users"
                   hx-target="#add-user-message"
                   hx-swap="innerHTML"
                   hx-indicator="#add-user-loading"

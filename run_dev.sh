@@ -33,6 +33,26 @@ while [[ $# -gt 0 ]]; do
 done
 
 
+# Parse command line arguments
+SKIP_BUILD=false
+USE_EXTERNAL_ASSETS=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --skip-build)
+            SKIP_BUILD=true
+            shift
+            ;;
+        --external-assets)
+            USE_EXTERNAL_ASSETS=true
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 # Detect hostname for external access (can be overridden with HOST_IP environment variable)
 if [ -z "$HOST_IP" ]; then
     # Try to get the primary IP address

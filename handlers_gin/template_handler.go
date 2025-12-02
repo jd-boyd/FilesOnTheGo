@@ -109,21 +109,31 @@ func (r *TemplateRenderer) LoadTemplates() error {
 			"layouts/base.html",
 			"layouts/app.html",
 			"pages/files.html",
+			"components/header.html",
 		},
 		"settings": {
 			"layouts/base.html",
 			"layouts/app.html",
 			"pages/settings.html",
+			"components/header.html",
 		},
 		"profile": {
 			"layouts/base.html",
 			"layouts/app.html",
 			"pages/profile.html",
+			"components/header.html",
 		},
 		"admin": {
 			"layouts/base.html",
 			"layouts/app.html",
 			"pages/admin.html",
+			"components/header.html",
+		},
+		"shares": {
+			"layouts/base.html",
+			"layouts/app.html",
+			"pages/shares.html",
+			"components/header.html",
 		},
 	}
 
