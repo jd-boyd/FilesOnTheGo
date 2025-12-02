@@ -41,7 +41,7 @@
                     type="text"
                     id="displayName"
                     name="displayName"
-                    value="{{if .User}}{{.User.Name}}{{else}}User{{end}}"
+                    value="{{if .User}}{{.User.Username}}{{else}}User{{end}}"
                     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2"
                     placeholder="Enter your display name"
                     required
@@ -102,13 +102,13 @@
             <!-- Account Created -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Account Created</label>
-                <p class="mt-1 text-sm text-gray-900">{{if .User}}{{.User.Created}}{{else}}Unknown{{end}}</p>
+                <p class="mt-1 text-sm text-gray-900">{{if .User}}Available{{else}}Unknown{{end}}</p>
             </div>
 
             <!-- Account ID -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Account ID</label>
-                <p class="mt-1 text-sm font-mono text-gray-600">{{if .User}}{{.User.ID}}{{else}}Unknown{{end}}</p>
+                <p class="mt-1 text-sm font-mono text-gray-600">{{if .User}}{{.User.UserID}}{{else}}Unknown{{end}}</p>
             </div>
 
             <!-- Admin Status -->

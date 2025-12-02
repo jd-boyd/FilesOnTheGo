@@ -241,6 +241,7 @@ func main() {
 		admin.POST("/api/users/:id/password", adminHandler.ResetUserPassword)
 		admin.DELETE("/api/users/:id", adminHandler.DeleteUser)
 		admin.GET("/api/users/search", adminHandler.SearchUsers)
+		admin.POST("/api/settings/update", adminHandler.UpdateSystemSettings)
 	}
 
 	// Root redirect to dashboard or login

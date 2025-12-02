@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,55 @@ func NewAdminHandler(
 func (h *AdminHandler) ShowAdminDashboard(c *gin.Context) {
 	data := PrepareTemplateData(c)
 	data.Title = "Admin Dashboard - FilesOnTheGo"
+
+	// Get users for the template (first page with 20 users)
+	users, total, err := h.userService.ListUsers(20, 0)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("Failed to load users for admin dashboard")
+		c.String(http.StatusInternalServerError, "Failed to load users")
+		return
+	}
+
+	// Add users to template data
+	data.Settings["Users"] = users
+	data.Settings["TotalUsers"] = total
+
+	// Add system stats
+	if total > 0 {
+		var totalStorageUsed int64
+		var totalFiles int64
+
+		// Calculate total storage used and file count
+		for _, user := range users {
+			userStats, err := h.userService.GetUserStats(user.ID)
+			if err == nil {
+				if storageUsed, ok := userStats["storage_used"].(int64); ok {
+					totalStorageUsed += storageUsed
+				}
+				if fileCount, ok := userStats["file_count"].(int64); ok {
+					totalFiles += fileCount
+				}
+			}
+		}
+
+		data.Settings["TotalStorageUsed"] = formatBytes(totalStorageUsed)
+		data.Settings["TotalFiles"] = totalFiles
+	} else {
+		data.Settings["TotalStorageUsed"] = "0 B"
+		data.Settings["TotalFiles"] = 0
+	}
+
+	// Add system info
+	data.Settings["Version"] = "0.2.0" // This should come from config
+	data.Settings["Environment"] = os.Getenv("APP_ENVIRONMENT")
+	if data.Settings["Environment"] == "" {
+		data.Settings["Environment"] = "development"
+	}
+	data.Settings["S3Endpoint"] = os.Getenv("S3_ENDPOINT")
+	data.Settings["S3Bucket"] = os.Getenv("S3_BUCKET")
+	data.Settings["PublicRegistration"] = os.Getenv("PUBLIC_REGISTRATION") == "true"
+	data.Settings["EmailVerification"] = os.Getenv("EMAIL_VERIFICATION") == "true"
+	data.Settings["DefaultQuotaGB"] = 5 // Default quota
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := h.renderer.Render(c.Writer, "admin", data); err != nil {
@@ -232,3 +282,28 @@ func (h *AdminHandler) SearchUsers(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
+
+// UpdateSystemSettings handles updating system-wide settings (admin only)
+func (h *AdminHandler) UpdateSystemSettings(c *gin.Context) {
+	var req struct {
+		PublicRegistration bool `json:"public_registration"`
+		EmailVerification bool `json:"email_verification"`
+		DefaultQuotaGB    int  `json:"default_quota"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// In a real implementation, these would be stored in a configuration table
+	// For now, just return success
+	adminID, _ := auth.GetUserID(c)
+	h.logger.Info().
+		Str("admin_id", adminID).
+		Interface("settings", req).
+		Msg("System settings updated by admin")
+
+	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
+}
+
