@@ -1055,37 +1055,6 @@ Brief description of changes and their purpose.
 - [ ] Ready for production deployment
 ```
 
-## Legacy Roadmap
-
-**Phase 1 (MVP):**
-- [x] Gin + GORM project setup
-- [x] S3 client integration
-- [x] Data models (GORM)
-- [ ] File upload/download
-- [ ] Directory navigation
-- [ ] Basic JWT auth
-- [ ] HTMX file browser
-- [ ] Read-only sharing
-- [ ] Password-protected shares
-
-**Phase 2 (Sharing):**
-- [x] All permission types
-- [x] Share expiration
-- [x] Share management UI
-- [x] Access logging
-
-**Phase 3 (UX):**
-- [x] Drag-and-drop upload
-- [x] Chunked uploads for large files
-- [ ] ZIP downloads for folders
-- [x] Mobile-responsive design
-
-**Phase 4 (Advanced):**
-- [ ] Search
-- [ ] User quotas
-- [ ] Admin panel
-- [ ] Webhooks
-
 **Maybe later:**
 - Team/org support
 - LDAP/SSO
